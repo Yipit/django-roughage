@@ -3,6 +3,7 @@ from django.contrib.admin.util import NestedObjects
 
 from .utils import queryset_namespace, chunks, model_namespace
 from django.db.models.loading import get_model
+from django.db import models
 from django.core import serializers
 
 class Dirt(object):
@@ -95,6 +96,21 @@ class Branch(BaseSeed):
 class Leaf(BaseSeed):
     pass
 
+def get_depends_on(obj):
+    model = obj.__class__
+    fields_to_get = [field.name for field in model._meta.fields if isinstance(field, models.ForeignKey)]
+    dependant_on = [getattr(obj, name) for name in fields_to_get]
+    for obj in dependant_on:
+        add_to_soil(obj)
+        get_depends_on(obj)
+        
+    
+
+SOIL = []
+
+def add_to_soil(obj):
+    SOIL.append(obj)
+    
 
 def get_dependents(queryset):
     # Get all dependent objects and add
