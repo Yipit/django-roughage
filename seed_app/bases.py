@@ -4,6 +4,7 @@ from django.contrib.admin.util import NestedObjects
 from .utils import queryset_namespace, chunks, model_namespace, get_model_from_key
 from django.db import models
 from django.core import serializers
+from django.core.exceptions import ObjectDoesNotExist
 
 SOIL = defaultdict(set)
 
@@ -32,7 +33,7 @@ class Dirt(object):
             model = get_model_from_key(key)
             for chunk in chunks(list(pk_set), self.CHUNK_SIZE):
                 objects = model._default_manager.filter(pk__in=chunk)
-                yield serializers.serialize(format, objects)
+                data = serializers.serialize(format, objects, ensure_ascii=False)
 
 class BaseSeed(object):
     
@@ -69,14 +70,11 @@ class BaseSeed(object):
         
     
     def add_queryset(self, queryset):
-        # TODO determine if leaf based on object model
-        leaf = False
         queryset_ids = [obj.id for obj in queryset]
         
         for obj in queryset:
             self.add_to_soil(obj)
-        if not leaf:
-            self.children = get_dependents(queryset)
+        self.children = get_dependents(queryset)
     
     def grow(self):
         print "\tProcessing seed", self
@@ -93,13 +91,14 @@ class BaseSeed(object):
             self.add_queryset(queryset)
         
         # self.children = { 'deal.Deal' : set(<deal1>, <deal5>), 'event.Event': set(<event3>, <event7>)}
-        for child_model, child_set in self.children.iteritems():
-            growth = self.get_growth(child_model)
-            if not growth:
-                continue
+        if self.children:
+            for child_model, child_set in self.children.iteritems():
+                growth = self.get_growth(child_model)
+                if not growth:
+                    continue
             
-            child_growth = growth(seeds=self.seeds, branches=self.branches, leaves=self.leaves, parent_model=self.model, ids_from_parent=child_set)
-            child_growth.grow()
+                child_growth = growth(seeds=self.seeds, branches=self.branches, leaves=self.leaves, parent_model=self.model, ids_from_parent=child_set)
+                child_growth.grow()
 
 
 
@@ -121,21 +120,40 @@ class Leaf(BaseSeed):
 
 def get_dependents(queryset):
     # Get all dependent objects and add
-    collect = NestedObjects('default')
-    collect.collect(queryset)
-    result = collect.nested()
-    # TODO this lists objects that need this obj, but not necessarily are sufficient with this obj
-    try:
-        dependents = result[1]
-    except IndexError:
-        dependents = []
+    # collect = NestedObjects('default')
+    # collect.collect(queryset)
+    # result = collect.nested()
+
     dependent_model_map = defaultdict(set)
-    flat_dependents = []
-    for dependent in dependents:
-        if isinstance(dependent, Iterable):
-            flat_dependents.extend(dependent)
+    try:
+        instance = queryset[0]
+    except IndexError:
+        return dependent_model_map
+
+    related_objects = instance._meta.get_all_related_objects()
+    for related_object in related_objects:
+        if isinstance(related_object.field, models.OneToOneField):
+            try:
+                one_to_one_obj = getattr(instance, related_object.get_accessor_name())
+                dependent_model_map[model_namespace(one_to_one_obj)].add(one_to_one_obj.id)
+            except ObjectDoesNotExist:
+                pass
         else:
-            flat_dependents.append(dependent)
-    for flat_dependent in flat_dependents:
-        dependent_model_map[model_namespace(flat_dependent)].add(flat_dependent.id)
+            queryset = getattr(instance, related_object.get_accessor_name())
+            dependent_model_map[queryset_namespace(queryset)].update([queryset_instance.id for queryset_instance in queryset.all()])
     return dependent_model_map
+    
+    # try:
+    #     dependents = result[1]
+    # except IndexError:
+    #     dependents = []
+    # dependent_model_map = defaultdict(set)
+    # flat_dependents = []
+    # for dependent in dependents:
+    #     if isinstance(dependent, Iterable):
+    #         flat_dependents.extend(dependent)
+    #     else:
+    #         flat_dependents.append(dependent)
+    # for flat_dependent in flat_dependents:
+    #     dependent_model_map[model_namespace(flat_dependent)].add(flat_dependent.id)
+    # return dependent_model_map
