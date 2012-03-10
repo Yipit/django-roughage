@@ -1,6 +1,8 @@
 from collections import defaultdict, Iterable
 from django.contrib.admin.util import NestedObjects
 
+from .utils import queryset_namespace
+
 class Dirt(object):
     
     def __init__(self, seeds, branches, leaves):
@@ -38,15 +40,10 @@ class BaseSeed(object):
         leaf = False
         queryset_ids = [obj.id for obj in queryset]
         
-        self.new_objects[queryset.model._meta.db_table].update(queryset_ids)
+        self.new_objects[queryset_namespace(queryset)].update(queryset_ids)
         if not leaf:
             self.children = get_dependents(queryset)
-            
-            # for keep_obj in keep_objs:
-            #     if isinstance(keep_obj, Iterable):
-            #         self.add_queryset(keep_obj)
-            #     else:
-            #         self.add_queryset([keep_obj])
+
 
 class Seed(BaseSeed):
     def seed_instances(self):

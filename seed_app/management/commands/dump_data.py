@@ -31,7 +31,7 @@ class Command(BaseCommand):
         print "Leaves", leaves.values()
         print "---------------------"
         
-        dirt = Dirt(seeds, branch, leaves)
+        dirt = Dirt(seeds, branches, leaves)
         dirt.start_growing()
         print "Dirt all planted", unicode(dirt)
 
