@@ -10,7 +10,7 @@ from django.utils.importlib import import_module
 CONFIG_NAME = 'seeds'
 
 from seed_app.bases import Branch, Leaf, Seed, Dirt
-from .utils import model_namespace
+from seed_app.utils import model_namespace
 
 class Command(BaseCommand):
     option_list = BaseCommand.option_list + (

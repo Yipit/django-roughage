@@ -2,16 +2,16 @@ from collections import defaultdict, Iterable
 from django.contrib.admin.util import NestedObjects
 
 from .utils import queryset_namespace, chunks, model_namespace, get_model_from_key
-from django.db.models.loading import get_model
 from django.db import models
 from django.core import serializers
 
+SOIL = defaultdict(set)
 
 class Dirt(object):
     CHUNK_SIZE = 100
     
     def __init__(self, seeds, branches, leaves):
-        self.soil = defaultdict(set)
+        self.soil = SOIL
         self.seeds = seeds
         self.branches = branches
         self.leaves = leaves
@@ -23,8 +23,8 @@ class Dirt(object):
         print "Planting some seeds"
         for seed_model, seed_class in self.seeds.iteritems():
             seed = seed_class(seeds=self.seeds, branches=self.branches, leaves=self.leaves)
-            new_objects = seed.grow()
-            self.soil.update(new_objects)
+            seed.grow()
+            #self.soil.update(new_objects)
     
     def harvest(self):#, format, indent):
         format = "json"
@@ -35,13 +35,16 @@ class Dirt(object):
                 yield serializers.serialize(format, objects)
 
 class BaseSeed(object):
-    def __init__(self, seeds, branches, leaves, parent_model=None, queryset_from_parent=None):
+    
+    soil = SOIL
+    
+    def __init__(self, seeds, branches, leaves, parent_model=None, ids_from_parent=None):
         self.seeds = seeds
         self.branches = branches
         self.leaves = leaves
         
         self.parent_model = parent_model
-        self.queryset_from_parent = queryset_from_parent
+        self.ids_from_parent = ids_from_parent
         
         self.new_objects = defaultdict(set)
         self.children = defaultdict(set)
@@ -55,21 +58,23 @@ class BaseSeed(object):
         leaf = False
         queryset_ids = [obj.id for obj in queryset]
         
-        self.new_objects[queryset_namespace(queryset)].update(queryset_ids)
+        self.soil[queryset_namespace(queryset)].update(queryset_ids)
         if not leaf:
             self.children = get_dependents(queryset)
     
     def grow(self):
         print "\tProcessing seed", self
-        if self.querysets:
+        if hasattr(self, 'querysets'):
             # Seeds
             for queryset in self.querysets:
                 self.add_queryset(queryset)
         else:
             # Branches, Leaves
-            print 'no branches yet'
-            #import pdb;pdb.set_trace()
-        
+            queryset_from_parent = self.model._default_manager.filter(id__in=self.ids_from_parent)
+            
+            reducer = getattr(self, "reduce_%s" % model_namespace(self.parent_model))
+            queryset = reducer(queryset_from_parent)
+            self.add_queryset(queryset)
         
         # self.children = { 'deal.Deal' : set(<deal1>, <deal5>), 'event.Event': set(<event3>, <event7>)}
         for child_model, child_set in self.children.iteritems():
@@ -77,9 +82,8 @@ class BaseSeed(object):
             if not growth:
                 continue
             
-            child_growth = growth(seeds=self.seeds, branches=self.branches, leaves=self.leaves, parent_model=self.model, queryset_from_parent=child_set)
+            child_growth = growth(seeds=self.seeds, branches=self.branches, leaves=self.leaves, parent_model=self.model, ids_from_parent=child_set)
             child_growth.grow()
-        return self.new_objects
 
 
 
@@ -103,12 +107,12 @@ def get_depends_on(obj):
     fields_to_get = [field.name for field in model._meta.fields if isinstance(field, models.ForeignKey)]
     dependant_on = [getattr(obj, name) for name in fields_to_get]
     for obj in dependant_on:
-        add_to_soil(obj)
-        get_depends_on(obj)
-        
-    
+        if obj:
+            add_to_soil(obj)
+            get_depends_on(obj)
 
-SOIL = []
+
+#SOIL = []
 
 def add_to_soil(obj):
     SOIL.append(obj)
@@ -132,5 +136,5 @@ def get_dependents(queryset):
         else:
             flat_dependents.append(dependent)
     for flat_dependent in flat_dependents:
-        dependent_model_map[model_namespace(flat_dependent)].add(flat_dependent)
+        dependent_model_map[model_namespace(flat_dependent)].add(flat_dependent.id)
     return dependent_model_map
