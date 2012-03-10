@@ -1,4 +1,6 @@
 import inspect
+import sys
+
 from optparse import make_option
 
 from django.db.models.loading import get_models, get_apps
@@ -34,6 +36,8 @@ class Command(BaseCommand):
         dirt = Dirt(seeds, branches, leaves)
         dirt.start_growing()
         print "Dirt all planted", unicode(dirt)
+        for objects in dirt.harvest():
+            sys.stdout.write(objects)
 
     def process_app(self, app):
         # Attempt to import the app's seed module.

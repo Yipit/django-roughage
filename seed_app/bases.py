@@ -1,9 +1,13 @@
 from collections import defaultdict, Iterable
 from django.contrib.admin.util import NestedObjects
 
-from .utils import queryset_namespace
+from .utils import queryset_namespace, chunks
+from django.db.models.loading import get_model
+from django.core import serializers
 
 class Dirt(object):
+    
+    CHUNK_SIZE = 100
     
     def __init__(self, seeds, branches, leaves):
         self.soil = defaultdict(set)
@@ -20,6 +24,20 @@ class Dirt(object):
             seed = seed_class()
             new_objects, children = seed.grow()
             self.soil.update(new_objects)
+    
+    def _get_model_from_soil_key(self, key):
+        app, model = key.split(".")
+        return get_model(app, model)
+        
+    def harvest(self):#, format, indent):
+        format = "json"
+        for key, pk_set in self.soil.iteritems():
+            model = self._get_model_from_soil_key(key)
+            for chunk in chunks(list(pk_set), self.CHUNK_SIZE):
+                objects = model._default_manager.filter(pk__in=chunk)
+                yield serializers.serialize(format, objects)
+                
+            
 
 
 
