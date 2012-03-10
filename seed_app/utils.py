@@ -1,7 +1,7 @@
 from django.db.models.loading import get_model
 
 def get_model_from_key(key):
-    app, model = key.split(".")
+    app, model = key.split("__")
     return get_model(app, model)
 
 def model_namespace(model_instance):

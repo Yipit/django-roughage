@@ -53,12 +53,28 @@ class BaseSeed(object):
         "Returns a seed, branch, or leaf class for the model."
         return self.seeds.get(model) or self.branches.get(model) or self.leaves.get(model)
     
+    
+    def add_depends_on(self, obj):
+        model = obj.__class__
+        fields_to_get = [field.name for field in model._meta.fields if isinstance(field, models.ForeignKey)]
+        dependant_on = [getattr(obj, name) for name in fields_to_get]
+        for obj in dependant_on:
+            if obj:
+                self.add_to_soil(obj)
+                self.add_depends_on(obj)
+    
+    def add_to_soil(self, obj):
+        self.soil[model_namespace(obj)].add(obj.id)
+        self.add_depends_on(obj)
+        
+    
     def add_queryset(self, queryset):
         # TODO determine if leaf based on object model
         leaf = False
         queryset_ids = [obj.id for obj in queryset]
         
-        self.soil[queryset_namespace(queryset)].update(queryset_ids)
+        for obj in queryset:
+            self.add_to_soil(obj)
         if not leaf:
             self.children = get_dependents(queryset)
     
@@ -102,21 +118,6 @@ class Branch(BaseSeed):
 class Leaf(BaseSeed):
     pass
 
-def get_depends_on(obj):
-    model = obj.__class__
-    fields_to_get = [field.name for field in model._meta.fields if isinstance(field, models.ForeignKey)]
-    dependant_on = [getattr(obj, name) for name in fields_to_get]
-    for obj in dependant_on:
-        if obj:
-            add_to_soil(obj)
-            get_depends_on(obj)
-
-
-#SOIL = []
-
-def add_to_soil(obj):
-    SOIL.append(obj)
-    
 
 def get_dependents(queryset):
     # Get all dependent objects and add
