@@ -1,12 +1,12 @@
 from collections import defaultdict, Iterable
 from django.contrib.admin.util import NestedObjects
 
-from .utils import queryset_namespace, chunks, model_namespace
+from .utils import queryset_namespace, chunks, model_namespace, get_model_from_key
 from django.db.models.loading import get_model
 from django.core import serializers
 
+
 class Dirt(object):
-    
     CHUNK_SIZE = 100
     
     def __init__(self, seeds, branches, leaves):
@@ -25,28 +25,22 @@ class Dirt(object):
             new_objects = seed.grow()
             self.soil.update(new_objects)
     
-    def _get_model_from_soil_key(self, key):
-        app, model = key.split(".")
-        return get_model(app, model)
-        
     def harvest(self):#, format, indent):
         format = "json"
         for key, pk_set in self.soil.iteritems():
-            model = self._get_model_from_soil_key(key)
+            model = get_model_from_key(key)
             for chunk in chunks(list(pk_set), self.CHUNK_SIZE):
                 objects = model._default_manager.filter(pk__in=chunk)
                 yield serializers.serialize(format, objects)
-                
-            
-
 
 class BaseSeed(object):
-    def __init__(self, seeds, branches, leaves, parent_model=None):
+    def __init__(self, seeds, branches, leaves, parent_model=None, queryset_from_parent=None):
         self.seeds = seeds
         self.branches = branches
         self.leaves = leaves
         
         self.parent_model = parent_model
+        self.queryset_from_parent = queryset_from_parent
         
         self.new_objects = defaultdict(set)
         self.children = defaultdict(set)
@@ -66,15 +60,23 @@ class BaseSeed(object):
     
     def grow(self):
         print "\tProcessing seed", self
-        for queryset in self.querysets:
-            self.add_queryset(queryset)
+        if self.querysets:
+            # Seeds
+            for queryset in self.querysets:
+                self.add_queryset(queryset)
+        else:
+            # Branches, Leaves
+            print 'no branches yet'
+            #import pdb;pdb.set_trace()
+        
+        
         # self.children = { 'deal.Deal' : set(<deal1>, <deal5>), 'event.Event': set(<event3>, <event7>)}
         for child_model, child_set in self.children.iteritems():
             growth = self.get_growth(child_model)
             if not growth:
                 continue
             
-            child_growth = growth(self.model, child_set)
+            child_growth = growth(seeds=self.seeds, branches=self.branches, leaves=self.leaves, parent_model=self.model, queryset_from_parent=child_set)
             child_growth.grow()
         return self.new_objects
 

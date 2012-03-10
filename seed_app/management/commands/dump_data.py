@@ -10,6 +10,7 @@ from django.utils.importlib import import_module
 CONFIG_NAME = 'seeds'
 
 from seed_app.bases import Branch, Leaf, Seed, Dirt
+from .utils import model_namespace
 
 class Command(BaseCommand):
     option_list = BaseCommand.option_list + (
@@ -38,6 +39,7 @@ class Command(BaseCommand):
         print "Dirt all planted", unicode(dirt)
         for objects in dirt.harvest():
             sys.stdout.write(objects)
+        print '\n'
 
     def process_app(self, app):
         # Attempt to import the app's seed module.
@@ -52,11 +54,11 @@ class Command(BaseCommand):
             for name in real_clazzes:
                 obj = getattr(module, name)
                 if (obj != Seed) and issubclass(obj, Seed):
-                    seeds[obj.model] = obj
+                    seeds[model_namespace(obj.model)] = obj
                 elif (obj != Leaf) and issubclass(obj, Leaf):
-                    leaves[obj.model] = obj
+                    leaves[model_namespace(obj.model)] = obj
                 elif (obj != Branch) and issubclass(obj, Branch):
-                    branches[obj.model] = obj
+                    branches[model_namespace(obj.model)] = obj
             return (seeds, branches, leaves)
         except ImportError:
             #print "No seed found for %s" % app

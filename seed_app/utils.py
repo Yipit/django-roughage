@@ -1,3 +1,7 @@
+def get_model_from_key(key):
+    app, model = key.split(".")
+    return get_model(app, model)
+
 def model_namespace(model_instance):
     return "%s__%s" % (model_instance._meta.app_label, model_instance._meta.module_name)
 
