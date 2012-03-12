@@ -29,17 +29,22 @@ class Command(BaseCommand):
             branches.update(app_branches)
             leaves.update(app_leaves)
         
-        print "Seeds", seeds.values()
-        print "Branches", branches.values()
-        print "Leaves", leaves.values()
-        print "---------------------"
+        sys.stderr.write("Seeds: %s\n" % seeds.values())
+        sys.stderr.write("Branches: %s\n" % branches.values())
+        sys.stderr.write("Leaves: %s\n" % leaves.values())
+        sys.stderr.write("---------------------")
         
         dirt = Dirt(seeds, branches, leaves)
         dirt.start_growing()
-        print "Dirt all planted", unicode(dirt)
+        sys.stdout.write("[")
+        first = True
         for objects in dirt.harvest():
-            sys.stdout.write(objects)
-        print '\n'
+            if not first:
+                sys.stdout.write(', ')
+            sys.stdout.write(objects[1:-1])
+            first = False
+        sys.stdout.write("]")
+        sys.stderr.write('\n')
 
     def process_app(self, app):
         # Attempt to import the app's seed module.

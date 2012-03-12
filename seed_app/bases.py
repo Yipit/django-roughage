@@ -21,7 +21,6 @@ class Dirt(object):
         return u"Dirt: %s" % self.soil
     
     def start_growing(self):
-        print "Planting some seeds"
         for seed_model, seed_class in self.seeds.iteritems():
             seed = seed_class(seeds=self.seeds, branches=self.branches, leaves=self.leaves)
             seed.grow()
@@ -34,6 +33,7 @@ class Dirt(object):
             for chunk in chunks(list(pk_set), self.CHUNK_SIZE):
                 objects = model._default_manager.filter(pk__in=chunk)
                 data = serializers.serialize(format, objects, ensure_ascii=False)
+                yield data
 
 class BaseSeed(object):
     
@@ -77,7 +77,6 @@ class BaseSeed(object):
         self.children = get_dependents(queryset)
     
     def grow(self):
-        print "\tProcessing seed", self
         if hasattr(self, 'querysets'):
             # Seeds
             for queryset in self.querysets:
