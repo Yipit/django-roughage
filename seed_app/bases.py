@@ -32,7 +32,7 @@ class Dirt(object):
             model = get_model_from_key(key)
             for chunk in chunks(list(pk_set), self.CHUNK_SIZE):
                 objects = model._default_manager.filter(pk__in=chunk)
-                data = serializers.serialize(format, objects, ensure_ascii=False)
+                data = serializers.serialize(format, objects, ensure_ascii=False, indent=2)
                 yield data
 
 class BaseGrowth(object):
@@ -60,16 +60,23 @@ class BaseGrowth(object):
     def add_depends_on(self, obj):
         fields_to_get = [field.name for field in obj._meta.fields if isinstance(field, models.ForeignKey)]
         dependant_on = [getattr(obj, name) for name in fields_to_get]
-        for obj in dependant_on:
-            if obj:
-                self.add_to_soil(obj)
-                self.add_depends_on(obj)
+        for _obj in dependant_on:
+            if _obj:
+                self.add_to_soil(_obj)
+        
+        m2ms = obj._meta.many_to_many
+        
+        for m2m in m2ms:
+            model = m2m.related.parent_model
+            if model_namespace(model) in self.branches:
+                objs = getattr(obj, m2m.name)
+                for _obj in objs.all():
+                    self.add_to_soil(_obj)
     
     def add_to_soil(self, obj):
         self.soil[model_namespace(obj)].add(obj.id)
         self.add_depends_on(obj)
         
-    
     def add_queryset(self, queryset):
         branches = self.get_branches()
         for obj in queryset:
