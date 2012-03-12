@@ -85,7 +85,11 @@ class BaseSeed(object):
             # Branches, Leaves
             queryset_from_parent = self.model._default_manager.filter(id__in=self.ids_from_parent)
             
-            reducer = getattr(self, "reduce_%s" % model_namespace(self.parent_model))
+            try:
+                reducer = getattr(self, "reduce_%s" % model_namespace(self.parent_model))
+            except AttributeError:
+                reducer = lambda queryset: queryset.none()
+            
             queryset = reducer(queryset_from_parent)
             self.add_queryset(queryset)
         
