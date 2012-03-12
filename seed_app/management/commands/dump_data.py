@@ -9,7 +9,7 @@ from django.conf import settings
 from django.utils.importlib import import_module
 CONFIG_NAME = 'seeds'
 
-from seed_app.bases import Branch, Leaf, Seed, Dirt
+from seed_app.bases import Branch, Seed, Dirt
 from seed_app.utils import model_namespace
 
 class Command(BaseCommand):
@@ -34,7 +34,7 @@ class Command(BaseCommand):
         sys.stderr.write("Leaves: %s\n" % leaves.values())
         sys.stderr.write("---------------------")
         
-        dirt = Dirt(seeds, branches, leaves)
+        dirt = Dirt(seeds, branches)
         dirt.start_growing()
         sys.stdout.write("[")
         first = True
@@ -60,8 +60,6 @@ class Command(BaseCommand):
                 obj = getattr(module, name)
                 if (obj != Seed) and issubclass(obj, Seed):
                     seeds[model_namespace(obj.model)] = obj
-                elif (obj != Leaf) and issubclass(obj, Leaf):
-                    leaves[model_namespace(obj.model)] = obj
                 elif (obj != Branch) and issubclass(obj, Branch):
                     branches[model_namespace(obj.model)] = obj
             return (seeds, branches, leaves)
