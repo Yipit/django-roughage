@@ -29,10 +29,10 @@ class Command(BaseCommand):
             branches.update(app_branches)
             leaves.update(app_leaves)
         
-        sys.stderr.write("Seeds: %s\n" % seeds.values())
-        sys.stderr.write("Branches: %s\n" % branches.values())
-        sys.stderr.write("Leaves: %s\n" % leaves.values())
-        sys.stderr.write("---------------------")
+        print >> sys.stderr, "Seeds: %s\n" % seeds.values()
+        print >> sys.stderr, "Branches: %s\n" % branches.values()
+        print >> sys.stderr, "Leaves: %s\n" % leaves.values()
+        print >> sys.stderr, "---------------------"
         
         dirt = Dirt(seeds, branches)
         dirt.start_growing()

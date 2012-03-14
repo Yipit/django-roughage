@@ -43,6 +43,9 @@ class BaseGrowth(object):
         self.seeds = seeds
         self.branches = branches
     
+    def __unicode__(self):
+        return u"%s" % self.__class__.__name__
+    
     def get_branches(self):
         
         model = self.model
@@ -86,6 +89,7 @@ class Seed(BaseGrowth):
         self.branches = branches
     
     def grow(self):
+        print >> sys.stderr, "Growing", unicode(self)
         for queryset in self.querysets:
             self.add_queryset(queryset)
 
@@ -97,6 +101,7 @@ class Branch(BaseGrowth):
         self.branches = branches
     
     def grow(self):
+        print >> sys.stderr, "Growing", self.__class__.__name__
         base_manager = getattr(self.parent, self.name).all()
         try:
             reducer = getattr(self, "reduce_%s" % model_namespace(self.parent))
