@@ -17,7 +17,6 @@ from seed_app.utils import model_namespace
 class Command(BaseCommand):
     
     def handle(self, *args, **options):
-
         clazz_names = [clazz_name for clazz_name in dir(signals) if not clazz_name.startswith ("__")]
         clazzes = [getattr(signals, clazz_name) for clazz_name in clazz_names]
         all_signals =  [clazz for clazz in clazzes if isinstance(clazz, Signal)]

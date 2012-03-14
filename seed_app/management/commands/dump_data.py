@@ -14,12 +14,14 @@ from seed_app.utils import model_namespace
 
 class Command(BaseCommand):
     option_list = BaseCommand.option_list + (
-        make_option("-d", "--delete", action="store_true", dest="delete", default=False, help='Disables Delete of Downloaded File'),
+        make_option("-d", "--database", dest="database", default="default", help='The database name to pull data from'),
     )
     
     def handle(self, *args, **options):
         self.seeds = {}
         self.branches = {}
+        self.database = options.get('database', "default")
+        
         
         apps = settings.INSTALLED_APPS
         for app in apps:
@@ -34,7 +36,7 @@ class Command(BaseCommand):
         print >> sys.stderr, "Branches: %s" % self.branches.values()
         sys.stderr.write("---------------------")
         
-        dirt = Dirt(self.seeds, self.branches)
+        dirt = Dirt(self.database, self.seeds, self.branches)
         dirt.start_growing()
         sys.stdout.write("[")
         first = True

@@ -25,7 +25,8 @@ class Dirt(object):
     
     CHUNK_SIZE = 100
     
-    def __init__(self, seeds, branches):
+    def __init__(self, database, seeds, branches):
+        self.database = database
         self.soil = SOIL
         self.seeds = seeds
         self.branches = branches
@@ -35,7 +36,7 @@ class Dirt(object):
     
     def start_growing(self):
         for seed_model, seed_class in self.seeds.iteritems():
-            seed = seed_class(branches=self.branches)
+            seed = seed_class(database=self.database, branches=self.branches)
             seed.grow()
     
     def harvest(self):#, format, indent):
@@ -51,7 +52,7 @@ class Dirt(object):
             else:
                 wash_func = None
             for chunk in chunks(list(pk_set), self.CHUNK_SIZE):
-                objects = model._default_manager.filter(pk__in=chunk)
+                objects = model._default_manager.using(self.database).filter(pk__in=chunk)
                 if wash_func:
                     for obj in objects:
                         wash_func(obj)
@@ -63,14 +64,17 @@ class BaseGrowth(object):
     __metaclass__ = GrowthMeta
     
     soil = SOIL
-    
     wash = None
+    
+    def __init__(self, database, seeds, branches, parent_model=None, ids_from_parent=None):
+        self.database = database
+        self.seeds = seeds
+        self.branches = branches
     
     def __unicode__(self):
         return u"%s" % self.__class__.__name__
     
     def get_branches(self):
-        
         model = self.model
         related_objects = model._meta.get_all_related_objects()
         branches = {}
@@ -96,7 +100,7 @@ class BaseGrowth(object):
             model = m2m.related.parent_model
             if obj.__class__ == self.model:
                 objs = getattr(obj, m2m.name)
-                for _obj in objs.all(): 
+                for _obj in objs.using(self.database).all():
                     self.add_to_soil(_obj)
         
         one2ones = [related.var_name for related in obj._meta.get_all_related_objects() if isinstance(related.field, models.OneToOneField)]
@@ -116,17 +120,18 @@ class BaseGrowth(object):
         
     def add_queryset(self, queryset):
         branches = self.get_branches()
-        for obj in queryset:
+        for obj in queryset.using(self.database):
             self.add_to_soil(obj)
             for name, branch in branches.items():
-                branch(obj, name, self.branches).grow()
+                branch(database=self.database, parent=obj, name=name, branches=self.branches).grow()
 
 
 class Seed(BaseGrowth):
     
     querysets = []
     
-    def __init__(self, branches):
+    def __init__(self, database, branches):
+        self.database = database
         self.branches = branches
     
     def grow(self):
@@ -136,7 +141,8 @@ class Seed(BaseGrowth):
 
 class Branch(BaseGrowth):
     
-    def __init__(self, parent, name, branches):
+    def __init__(self, database, parent, name, branches):
+        self.database = database
         self.parent = parent
         self.name = name
         self.branches = branches
@@ -149,7 +155,7 @@ class Branch(BaseGrowth):
             return
         
         if isinstance(base, Manager):
-            base_manager = base.all()
+            base_manager = base.using(self.database).all()
             try:
                 reducer = getattr(self, "trim_%s" % model_namespace(self.parent))
             except AttributeError:
