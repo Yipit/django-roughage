@@ -18,23 +18,23 @@ class Command(BaseCommand):
     )
     
     def handle(self, *args, **options):
-        seeds = {}
-        branches = {}
-        leaves = {}
+        self.seeds = {}
+        self.branches = {}
         
         apps = settings.INSTALLED_APPS
         for app in apps:
-            app_seeds, app_branches, app_leaves = self.process_app(app)
-            seeds.update(app_seeds)
-            branches.update(app_branches)
-            leaves.update(app_leaves)
-        
-        sys.stderr.write("Seeds: %s\n" % seeds.values())
-        sys.stderr.write("Branches: %s\n" % branches.values())
-        sys.stderr.write("Leaves: %s\n" % leaves.values())
+            self.process_app(app)
+        try:
+            seeds = import_module('seeds')
+        except ImportError:
+            pass
+        else:
+            self.process_module(seeds)
+        sys.stderr.write("Seeds: %s\n" % self.seeds.values())
+        sys.stderr.write("Branches: %s\n" % self.branches.values())
         sys.stderr.write("---------------------")
         
-        dirt = Dirt(seeds, branches)
+        dirt = Dirt(self.seeds, self.branches)
         dirt.start_growing()
         sys.stdout.write("[")
         first = True
@@ -45,25 +45,26 @@ class Command(BaseCommand):
             first = False
         sys.stdout.write("]")
         sys.stderr.write('\n')
-
+        
+    def process_module(self, module):
+        seeds = {}
+        branches = {}
+        real_clazzes = [clazz for clazz in dir(module) if not clazz.startswith ("__")]
+        for name in real_clazzes:
+            obj = getattr(module, name)
+            if (obj != Seed) and issubclass(obj, Seed):
+                seeds[model_namespace(obj.model)] = obj
+            elif (obj != Branch) and issubclass(obj, Branch):
+                branches[model_namespace(obj.model)] = obj
+        self.seeds.update(seeds)
+        self.branches.update(branches)
+    
     def process_app(self, app):
         # Attempt to import the app's seed module.
         try:
-            # if app == 'geo':
-            #     import pdb;pdb.set_trace()
             module = import_module('%s.%s' % (app, CONFIG_NAME))
-            seeds = {}
-            branches = {}
-            leaves = {}
-            real_clazzes = [clazz for clazz in dir(module) if not clazz.startswith ("__")]
-            for name in real_clazzes:
-                obj = getattr(module, name)
-                if (obj != Seed) and issubclass(obj, Seed):
-                    seeds[model_namespace(obj.model)] = obj
-                elif (obj != Branch) and issubclass(obj, Branch):
-                    branches[model_namespace(obj.model)] = obj
-            return (seeds, branches, leaves)
         except ImportError:
-            #print "No seed found for %s" % app
-            return ([], [], [])
+            pass
+        else:
+            self.process_module(module)
 

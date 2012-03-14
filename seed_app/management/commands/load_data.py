@@ -18,6 +18,7 @@ class Command(BaseCommand):
         #~ Disable foreign key checks during fixture loading
         from django.db import connections, DEFAULT_DB_ALIAS
         connection = connections[DEFAULT_DB_ALIAS]
+        import pdb; pdb.set_trace()
         if 'mysql' in connection.settings_dict['ENGINE']:
             cursor = connection.cursor()
             cursor.execute('SET foreign_key_checks = 0')
@@ -31,3 +32,5 @@ class Command(BaseCommand):
             cursor = connection.cursor()
             cursor.execute('SET foreign_key_checks = 1')
         connection.close()
+        from django.db import connection
+        print connection.queries
