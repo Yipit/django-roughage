@@ -40,7 +40,7 @@ class Command(BaseCommand):
         first = True
         for objects in dirt.harvest():
             if not first:
-                sys.stdout.write(', ')
+                sys.stdout.write(',')
             sys.stdout.write(objects[1:-1])
             first = False
         sys.stdout.write("]")
