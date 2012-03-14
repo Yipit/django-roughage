@@ -8,6 +8,7 @@ from django.db import models
 from django.core import serializers
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models.loading import get_model
+from django.db.models import Manager
 
 class GrowthMeta(type):
     
@@ -142,11 +143,19 @@ class Branch(BaseGrowth):
     
     def grow(self):
         print >> sys.stderr, "Growing", self.__class__.__name__
-        base_manager = getattr(self.parent, self.name).all()
         try:
-            reducer = getattr(self, "trim_%s" % model_namespace(self.parent))
-        except AttributeError:
-            reducer = lambda queryset: queryset.none()
+            base = getattr(self.parent, self.name)
+        except ObjectDoesNotExist:
+            return
         
-        queryset = reducer(base_manager)
-        self.add_queryset(queryset)
+        if isinstance(base, Manager):
+            base_manager = base.all()
+            try:
+                reducer = getattr(self, "trim_%s" % model_namespace(self.parent))
+            except AttributeError:
+                reducer = lambda queryset: queryset.none()
+        
+            queryset = reducer(base_manager)
+            self.add_queryset(queryset)
+        else:
+            self.add_to_soil(base)

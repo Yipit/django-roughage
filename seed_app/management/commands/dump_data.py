@@ -30,8 +30,8 @@ class Command(BaseCommand):
             pass
         else:
             self.process_module(seeds)
-        print >> sys.stderr "Seeds: %s" % self.seeds.values()
-        print >> sys.stderr "Branches: %s" % self.branches.values()
+        print >> sys.stderr, "Seeds: %s" % self.seeds.values()
+        print >> sys.stderr, "Branches: %s" % self.branches.values()
         sys.stderr.write("---------------------")
         
         dirt = Dirt(self.seeds, self.branches)
