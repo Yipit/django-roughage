@@ -25,7 +25,8 @@ class Dirt(object):
     
     CHUNK_SIZE = 100
     
-    def __init__(self, seeds, branches):
+    def __init__(self, database, seeds, branches):
+        self.database = database
         self.soil = SOIL
         self.seeds = seeds
         self.branches = branches
@@ -35,7 +36,7 @@ class Dirt(object):
     
     def start_growing(self):
         for seed_model, seed_class in self.seeds.iteritems():
-            seed = seed_class(branches=self.branches)
+            seed = seed_class(database=self.database, branches=self.branches)
             seed.grow()
     
     def harvest(self):#, format, indent):
@@ -51,7 +52,7 @@ class Dirt(object):
             else:
                 wash_func = None
             for chunk in chunks(list(pk_set), self.CHUNK_SIZE):
-                objects = model._default_manager.filter(pk__in=chunk)
+                objects = model._default_manager.using(self.database).filter(pk__in=chunk)
                 if wash_func:
                     for obj in objects:
                         wash_func(obj)
@@ -63,8 +64,12 @@ class BaseGrowth(object):
     __metaclass__ = GrowthMeta
     
     soil = SOIL
-    
     wash = None
+    
+    def __init__(self, database, seeds, branches, parent_model=None, ids_from_parent=None):
+        self.database = database
+        self.seeds = seeds
+        self.branches = branches
     
     def __unicode__(self):
         return u"%s" % self.__class__.__name__
@@ -96,7 +101,7 @@ class BaseGrowth(object):
             for m2m in m2ms:
                 auto_created = m2m.rel.through._meta.auto_created
                 objs = getattr(obj, m2m.name)
-                for _obj in objs.all(): 
+                for _obj in objs.using(self.database).all():
                     self.add_to_soil(_obj)
                 # If the m2m through table was manually declared django serializes 
                 # differently, so we need to account for that
@@ -135,7 +140,8 @@ class Seed(BaseGrowth):
     
     querysets = []
     
-    def __init__(self, branches):
+    def __init__(self, database, branches):
+        self.database = database
         self.branches = branches
     
     def grow(self):
@@ -145,7 +151,8 @@ class Seed(BaseGrowth):
 
 class Branch(BaseGrowth):
     
-    def __init__(self, parent, name, branches):
+    def __init__(self, database, parent, name, branches):
+        self.database = database
         self.parent = parent
         self.name = name
         self.branches = branches
@@ -162,7 +169,7 @@ class Branch(BaseGrowth):
         
         # If base is a manager, try to reduce the query
         if isinstance(base, Manager):
-            base_manager = base.all()
+            base_manager = base.using(self.database).all()
             try:
                 reducer = getattr(self, "trim_%s" % model_namespace(self.parent))
             except AttributeError:
