@@ -69,9 +69,9 @@ class BaseGrowth(object):
     def __unicode__(self):
         return u"%s" % self.__class__.__name__
     
-    def get_branches(self):
+    def get_branches(self, obj):
         
-        model = self.model
+        model = obj.__class__
         related_objects = model._meta.get_all_related_objects()
         branches = {}
         for related_object in related_objects:
@@ -90,14 +90,21 @@ class BaseGrowth(object):
             if _obj:
                 self.add_to_soil(_obj)
         
-        m2ms = obj._meta.many_to_many
-        
-        for m2m in m2ms:
-            model = m2m.related.parent_model
-            if obj.__class__ == self.model:
+        # Only follow m2ms for models with branches or seeds
+        if obj.__class__ == self.model:
+            m2ms = obj._meta.many_to_many
+            for m2m in m2ms:
+                auto_created = m2m.rel.through._meta.auto_created
                 objs = getattr(obj, m2m.name)
                 for _obj in objs.all(): 
                     self.add_to_soil(_obj)
+                # If the m2m through table was manually declared django serializes 
+                # differently, so we need to account for that
+                if not auto_created:
+                    objs = m2m.rel.through.objects.using(self.database).filter(**{m2m.related_query_name(): obj})
+                    for _obj in objs:
+                        self.add_to_soil(_obj)
+                    
         
         one2ones = [related.var_name for related in obj._meta.get_all_related_objects() if isinstance(related.field, models.OneToOneField)]
         for one2one in one2ones:
@@ -109,17 +116,19 @@ class BaseGrowth(object):
                 self.add_to_soil(_obj)
     
     def add_to_soil(self, obj):
-        if obj.id in self.soil[model_namespace(obj)]:
+        
+        key = model_namespace(obj)
+        if obj.id in self.soil[key]:
             return
-        self.soil[model_namespace(obj)].add(obj.id)
+        self.soil[key].add(obj.id)
         self.add_depends_on(obj)
+        branches = self.get_branches(obj)
+        for name, branch in branches.items():
+            branch(obj, name, self.branches).grow()
         
     def add_queryset(self, queryset):
-        branches = self.get_branches()
         for obj in queryset:
             self.add_to_soil(obj)
-            for name, branch in branches.items():
-                branch(obj, name, self.branches).grow()
 
 
 class Seed(BaseGrowth):
@@ -142,12 +151,16 @@ class Branch(BaseGrowth):
         self.branches = branches
     
     def grow(self):
-        print >> sys.stderr, "Growing", self.__class__.__name__
+        
+        # Get the related object or manager
         try:
             base = getattr(self.parent, self.name)
         except ObjectDoesNotExist:
+            # if we get an ObjectDoesNotExists, it was a OneToOne
+            # that doesn't actually exist in the database
             return
         
+        # If base is a manager, try to reduce the query
         if isinstance(base, Manager):
             base_manager = base.all()
             try:
@@ -157,5 +170,7 @@ class Branch(BaseGrowth):
         
             queryset = reducer(base_manager)
             self.add_queryset(queryset)
+        # Otherwise base is a object from the OneToOne relation
+        # so add it to the soil
         else:
             self.add_to_soil(base)
