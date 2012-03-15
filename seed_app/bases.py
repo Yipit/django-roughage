@@ -19,7 +19,15 @@ class GrowthMeta(type):
             attrs['model'] = get_model(app, model)
         return super(GrowthMeta, cls).__new__(cls, name, bases, attrs)
 
-SOIL = defaultdict(set)
+class Soil(object):
+    
+    def __init__(self):
+        
+        self.objects = defaultdict(set)
+        self.branched = defaultdict(set)
+
+SOIL = Soil()
+
 
 class Dirt(object):
     
@@ -41,7 +49,7 @@ class Dirt(object):
     
     def harvest(self):#, format, indent):
         format = "json"
-        for key, pk_set in self.soil.iteritems():
+        for key, pk_set in self.soil.objects.iteritems():
             model = get_model_from_key(key)
             key = model_namespace(model)
             
@@ -75,7 +83,11 @@ class BaseGrowth(object):
         return u"%s" % self.__class__.__name__
     
     def get_branches(self, obj):
+        """
+        Return branches for classes that ForeignKey to obj
         
+        NOT DEPENDENT ON WHICH GROWTH WE ARE IN. THAT SEEMS BAD
+        """
         model = obj.__class__
         related_objects = model._meta.get_all_related_objects()
         branches = {}
@@ -88,7 +100,19 @@ class BaseGrowth(object):
         
         return branches
     
-    def add_depends_on(self, obj):
+    def add_depends_on(self, obj, add_m2ms=False):
+        """
+        Get all obects that obj depends on.
+        
+        If obj is an instance on the model for the current Growth,
+        follow m2m relationships. Otherwise, don't get the m2m'd 
+        models neccessarily
+        """
+        
+        # Only follow m2ms for models with branches or seeds
+        if obj.__class__ == self.model:
+            add_m2ms = True
+        
         fields_to_get = [field.name for field in obj._meta.fields if isinstance(field, models.ForeignKey)]
         dependant_on = [getattr(obj, name) for name in fields_to_get]
         for _obj in dependant_on:
@@ -96,16 +120,23 @@ class BaseGrowth(object):
                 self.add_to_soil(_obj)
         
         # Only follow m2ms for models with branches or seeds
-        if obj.__class__ == self.model:
+        if add_m2ms:
             m2ms = obj._meta.many_to_many
             for m2m in m2ms:
-                auto_created = m2m.rel.through._meta.auto_created
-                objs = getattr(obj, m2m.name)
-                for _obj in objs.using(self.database).all():
-                    self.add_to_soil(_obj)
+                capture_m2m_objects = True
+                capture_join = False
+                if m2m.rel.to == obj.__class__:
+                    capture_m2m_objects = False
+                    capture_join = True
+                if not capture_join:
+                    capture_join = m2m.rel.through._meta.auto_created
+                if capture_m2m_objects:
+                    objs = getattr(obj, m2m.name)
+                    for _obj in objs.using(self.database).all():
+                        self.add_to_soil(_obj)
                 # If the m2m through table was manually declared django serializes 
                 # differently, so we need to account for that
-                if not auto_created:
+                if not capture_join:
                     objs = m2m.rel.through.objects.using(self.database).filter(**{m2m.related_query_name(): obj})
                     for _obj in objs:
                         self.add_to_soil(_obj)
@@ -121,17 +152,32 @@ class BaseGrowth(object):
                 self.add_to_soil(_obj)
     
     def add_to_soil(self, obj):
+        """
+        Put obj in the soil for the correct name space
+        for later retrieval and serialization
+        """
         
         key = model_namespace(obj)
-        if obj.id in self.soil[key]:
+        if obj.id in self.soil.objects[key]:
             return
-        self.soil[key].add(obj.id)
-        self.add_depends_on(obj)
+        if self.parent and self.parent.__class__ == obj.__class__:
+            return
+        self.soil.objects[key].add(obj.id)
+        if key in self.branches and not obj.id in self.soil.branched[key]:
+            self.soil.branched[key].add(obj.id)
+            add_m2ms = True
+        else:
+            add_m2ms = False
+        
+        self.add_depends_on(obj, add_m2ms)
         branches = self.get_branches(obj)
         for name, branch in branches.items():
-            branch(obj, name, self.branches).grow()
+            branch(self.database, obj, name, self.branches).grow()
         
     def add_queryset(self, queryset):
+        """
+        Add all objs in the queryset to the soil
+        """
         for obj in queryset:
             self.add_to_soil(obj)
 
@@ -139,7 +185,7 @@ class BaseGrowth(object):
 class Seed(BaseGrowth):
     
     querysets = []
-    
+    parent = None
     def __init__(self, database, branches):
         self.database = database
         self.branches = branches
