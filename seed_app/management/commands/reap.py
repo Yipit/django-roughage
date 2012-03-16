@@ -32,7 +32,7 @@ class Command(BaseCommand):
 
         #~ Load fixture
         from django.core.management import call_command
-        call_command('loaddata', 'test.json', verbosity=0)
+        call_command('loaddata', args[0], verbosity=0)
 
         #~ Enable foreign key checks after fixture loading
         if 'mysql' in connection.settings_dict['ENGINE']:
