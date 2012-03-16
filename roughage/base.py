@@ -178,7 +178,7 @@ class BaseGrowth(object):
         """
         Add all objs in the queryset to the soil
         """
-        for obj in queryset:
+        for obj in queryset.using(self.database):
             self.add_to_soil(obj)
 
 
