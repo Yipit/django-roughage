@@ -1,5 +1,4 @@
 from setuptools import setup, find_packages
-import storages
 
 setup(
     name = "django-roughage",
