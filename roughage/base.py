@@ -1,23 +1,24 @@
 import sys
 
-from collections import defaultdict, Iterable
-from django.contrib.admin.util import NestedObjects
+from collections import defaultdict
 
-from .utils import queryset_namespace, chunks, model_namespace, get_model_from_key
+from .utils import chunks, model_namespace, get_model_from_key
 from django.db import models
 from django.core import serializers
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models.loading import get_model
 from django.db.models import Manager
 
+
 class GrowthMeta(type):
     
     def __new__(cls, name, bases, attrs):
         model = attrs.get('model')
         if isinstance(model, basestring):
-            app, model =  attrs.get('model').split(".")
+            app, model = attrs.get('model').split(".")
             attrs['model'] = get_model(app, model)
         return super(GrowthMeta, cls).__new__(cls, name, bases, attrs)
+
 
 class Soil(object):
     
@@ -25,6 +26,7 @@ class Soil(object):
         
         self.objects = defaultdict(set)
         self.branched = defaultdict(set)
+        self.trees = []
 
 SOIL = Soil()
 
@@ -47,7 +49,14 @@ class Dirt(object):
             seed = seed_class(database=self.database, branches=self.branches)
             seed.grow()
     
-    def harvest(self):#, format, indent):
+    def print_soil(self):
+        print >> sys.stderr, "The following have been planted:"
+        sorted_keys = sorted(self.soil.objects.keys())
+        for key in sorted_keys:
+            object_count = len(self.soil.objects[key])
+            print >> sys.stderr, "\t%s:%s" % (key, object_count)
+    
+    def harvest(self):
         format = "json"
         for key, pk_set in self.soil.objects.iteritems():
             model = get_model_from_key(key)
@@ -66,6 +75,7 @@ class Dirt(object):
                         wash_func(obj)
                 data = serializers.serialize(format, objects, ensure_ascii=True, indent=2)
                 yield data
+
 
 class BaseGrowth(object):
     
@@ -105,7 +115,7 @@ class BaseGrowth(object):
         Get all obects that obj depends on.
         
         If obj is an instance on the model for the current Growth,
-        follow m2m relationships. Otherwise, don't get the m2m'd 
+        follow m2m relationships. Otherwise, don't get the m2m'd
         models neccessarily
         """
         
@@ -134,13 +144,12 @@ class BaseGrowth(object):
                     objs = getattr(obj, m2m.name)
                     for _obj in objs.using(self.database).all():
                         self.add_to_soil(_obj)
-                # If the m2m through table was manually declared django serializes 
+                # If the m2m through table was manually declared django serializes
                 # differently, so we need to account for that
                 if not capture_join:
                     objs = m2m.rel.through.objects.using(self.database).filter(**{m2m.related_query_name(): obj})
                     for _obj in objs:
                         self.add_to_soil(_obj)
-                    
         
         one2ones = [related.var_name for related in obj._meta.get_all_related_objects() if isinstance(related.field, models.OneToOneField)]
         for one2one in one2ones:
@@ -162,6 +171,7 @@ class BaseGrowth(object):
             return
         if self.parent and self.parent.__class__ == obj.__class__:
             return
+        
         self.soil.objects[key].add(obj.id)
         if key in self.branches and not obj.id in self.soil.branched[key]:
             self.soil.branched[key].add(obj.id)
@@ -186,14 +196,17 @@ class Seed(BaseGrowth):
     
     querysets = []
     parent = None
+    
     def __init__(self, database, branches):
         self.database = database
         self.branches = branches
     
     def grow(self):
-        print >> sys.stderr, "Growing", unicode(self)
+        print >> sys.stderr, "\tGrowing", unicode(self)
+        
         for queryset in self.querysets:
             self.add_queryset(queryset)
+
 
 class Branch(BaseGrowth):
     

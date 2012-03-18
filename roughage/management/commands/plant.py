@@ -1,9 +1,7 @@
-import inspect
 import sys
 
 from optparse import make_option
 
-from django.db.models.loading import get_models, get_apps
 from django.core.management.base import BaseCommand
 from django.conf import settings
 from django.utils.importlib import import_module
@@ -11,6 +9,7 @@ CONFIG_NAME = 'seeds'
 
 from roughage.base import Branch, Seed, Dirt
 from roughage.utils import model_namespace
+
 
 class Command(BaseCommand):
     option_list = BaseCommand.option_list + (
@@ -22,7 +21,6 @@ class Command(BaseCommand):
         self.branches = {}
         self.database = options.get('database', "default")
         
-        
         apps = settings.INSTALLED_APPS
         for app in apps:
             self.process_app(app)
@@ -32,12 +30,14 @@ class Command(BaseCommand):
             pass
         else:
             self.process_module(seeds)
-        print >> sys.stderr, "Seeds: %s" % self.seeds.values()
-        print >> sys.stderr, "Branches: %s" % self.branches.values()
-        sys.stderr.write("---------------------")
+        print >> sys.stderr, "Preparing to plant..."
+        print >> sys.stderr, "\tSeeds: %s" % self.seeds.values()
+        print >> sys.stderr, "\tBranches: %s" % self.branches.values()
+        print >> sys.stderr, "Now Growing..."
         
         dirt = Dirt(self.database, self.seeds, self.branches)
         dirt.start_growing()
+        dirt.print_soil()
         sys.stdout.write("[")
         first = True
         for objects in dirt.harvest():
@@ -51,7 +51,7 @@ class Command(BaseCommand):
     def process_module(self, module):
         seeds = {}
         branches = {}
-        real_clazzes = [clazz for clazz in dir(module) if not clazz.startswith ("__")]
+        real_clazzes = [clazz for clazz in dir(module) if not clazz.startswith("__")]
         for name in real_clazzes:
             obj = getattr(module, name)
             if (obj != Seed) and issubclass(obj, Seed):
@@ -69,4 +69,3 @@ class Command(BaseCommand):
             pass
         else:
             self.process_module(module)
-
