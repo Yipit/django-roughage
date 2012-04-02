@@ -15,7 +15,7 @@ from roughage.base import Branch, Seed, Dirt
 from roughage.utils import model_namespace
 
 class Command(BaseCommand):
-    
+
     def handle(self, *args, **options):
         clazz_names = [clazz_name for clazz_name in dir(signals) if not clazz_name.startswith ("__")]
         clazzes = [getattr(signals, clazz_name) for clazz_name in clazz_names]
@@ -32,7 +32,7 @@ class Command(BaseCommand):
 
         #~ Load fixture
         from django.core.management import call_command
-        call_command('loaddata', args[0], verbosity=0)
+        call_command('loaddata', args[0], **options)
 
         #~ Enable foreign key checks after fixture loading
         if 'mysql' in connection.settings_dict['ENGINE']:
