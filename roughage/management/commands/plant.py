@@ -14,12 +14,16 @@ from roughage.utils import model_namespace
 class Command(BaseCommand):
     option_list = BaseCommand.option_list + (
         make_option("-d", "--database", dest="database", default="default", help='The database name to pull data from'),
+        make_option("-f", "--file", dest="dest_file", default=None, help='The filename to put data in'),
     )
     
     def handle(self, *args, **options):
         self.seeds = {}
         self.branches = {}
-        self.database = options.get('database', "default")
+        self.database = options.get('database')
+        self.dest_file = options.get('dest_file')
+        
+        stream = options.get("stream")
         
         apps = settings.INSTALLED_APPS
         for app in apps:
@@ -38,15 +42,7 @@ class Command(BaseCommand):
         dirt = Dirt(self.database, self.seeds, self.branches)
         dirt.start_growing()
         dirt.print_soil()
-        sys.stdout.write("[")
-        first = True
-        for objects in dirt.harvest():
-            if not first:
-                sys.stdout.write(',')
-            sys.stdout.write(objects[1:-1])
-            first = False
-        sys.stdout.write("]")
-        sys.stderr.write('\n')
+        dirt.harvest(stream)
         
     def process_module(self, module):
         seeds = {}

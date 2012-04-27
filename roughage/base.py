@@ -56,8 +56,8 @@ class Dirt(object):
             object_count = len(self.soil.objects[key])
             print >> sys.stderr, "\t%s:%s" % (key, object_count)
     
-    def harvest(self):
-        format = "json"
+    def _harvest(self):
+        format = "roughage"
         for key, pk_set in self.soil.objects.iteritems():
             model = get_model_from_key(key)
             key = model_namespace(model)
@@ -73,8 +73,17 @@ class Dirt(object):
                 if wash_func:
                     for obj in objects:
                         wash_func(obj)
-                data = serializers.serialize(format, objects, ensure_ascii=True, indent=2)
+                data = serializers.serialize(format, objects, ensure_ascii=True, indent=2, dirt=self)
                 yield data
+    
+    def harvest(self, stream):
+        stream.write("[")
+        for index, objects in enumerate(self._harvest()):
+            if index:
+                stream.write(',')
+            stream.write(objects[1:-1])
+        stream.write("]")
+        stream.write('\n')
 
 
 class BaseGrowth(object):
@@ -98,6 +107,7 @@ class BaseGrowth(object):
         
         NOT DEPENDENT ON WHICH GROWTH WE ARE IN. THAT SEEMS BAD
         """
+        
         model = obj.__class__
         related_objects = model._meta.get_all_related_objects()
         branches = {}

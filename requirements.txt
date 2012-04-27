@@ -1,0 +1,2 @@
+nose
+django==1.4
