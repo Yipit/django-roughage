@@ -14,6 +14,19 @@ from django.test import simple
 from django.core.management import call_command
 from app.models import Book, Author, Publisher
 
+
+"""
+Things test data should confirm:
+
+Objects with FK dependencies get the dependencies
+Objects with Non-followed M2Ms get the ungotten objects stripped
+Objects with followed M2Ms get the objects
+Objects with OneToOne dependencies get the dependencies
+Objects with OneToOne dependencies are added when the dependencies are added
+
+"""
+
+
 class RoughageTestSuite(unittest.TestCase):
     def setUp(self):
         bob_johnson = Author.objects.create(first_name="Bob", last_name="Johnson")
