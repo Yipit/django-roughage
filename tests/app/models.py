@@ -13,7 +13,7 @@ class Author(models.Model):
 
 
 class Pseudonym(models.Model):
-    author = models.ForeignKey(Author)
+    author = models.OneToOneField(Author)
     name = models.CharField(max_length=255)
 
 

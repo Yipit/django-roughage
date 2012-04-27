@@ -27,6 +27,11 @@ class Soil(object):
         self.objects = defaultdict(set)
         self.branched = defaultdict(set)
         self.trees = []
+    
+    def clear(self):
+        self.objects = defaultdict(set)
+        self.branched = defaultdict(set)
+        self.trees = []
 
 SOIL = Soil()
 

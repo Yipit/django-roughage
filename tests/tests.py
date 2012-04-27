@@ -1,8 +1,7 @@
-
 import os
 import sys
 import unittest
-
+import json
 import StringIO
 
 test_dir = os.path.dirname(os.path.abspath(__file__))
@@ -12,8 +11,10 @@ os.environ["DJANGO_SETTINGS_MODULE"] = 'settings'
 
 from django.test import simple
 from django.core.management import call_command
-from app.models import Book, Author, Publisher
+from app.models import Book, Author, Publisher, BookReport
+from sure import that
 
+from roughage.base import SOIL
 
 """
 Things test data should confirm:
@@ -27,8 +28,19 @@ Objects with OneToOne dependencies are added when the dependencies are added
 """
 
 
-class RoughageTestSuite(unittest.TestCase):
+class RoughageTestSuiteBase(object):
+    
     def setUp(self):
+        self.runner = simple.DjangoTestSuiteRunner()
+        self.old_config = self.runner.setup_databases()
+        self.create_data()
+        SOIL.clear()
+        
+    
+    def tearDown(self):
+        self.runner.teardown_databases(self.old_config)
+    
+    def create_data(self):
         bob_johnson = Author.objects.create(first_name="Bob", last_name="Johnson")
         bob_thorton = Author.objects.create(first_name="Bob", last_name="Thorton")
         george_costanza = Author.objects.create(first_name="George", last_name="Costanza")
@@ -55,15 +67,88 @@ class RoughageTestSuite(unittest.TestCase):
 
     def test_plant(self):
         stream = StringIO.StringIO()
-        call_command('plant', stream=stream)
+        call_command('plant', stream=stream, seeds_module=self.seeds_module)
         stream.seek(0)
-        print stream.read()
-        
+        actual_json = stream.read()
+        print actual_json
+
+        assert that(json.loads(actual_json)).equals(self.expected)
+
+class FollowedM2Ms(RoughageTestSuiteBase, unittest.TestCase):
+    
+    seeds_module = 'seeds.followed_m2ms'
+    expected = [
+      {
+        "pk": 1,
+        "model": "app.author",
+        "fields": {
+          "first_name": "Bob",
+          "last_name": "Johnson"
+        }
+      },
+      {
+        "pk": 2,
+        "model": "app.author",
+        "fields": {
+          "first_name": "Bob",
+          "last_name": "Thorton"
+        }
+      }
+    ,
+      {
+        "pk": 1,
+        "model": "app.book",
+        "fields": {
+          "publisher": 1,
+          "authors": [
+            1,
+            2
+          ],
+          "title": "Book 1"
+        }
+      }
+    ,
+      {
+        "pk": 1,
+        "model": "app.publisher",
+        "fields": {
+          "name": "Random House"
+        }
+      }
+    ]
+
+
+class GetForeignKeys(RoughageTestSuiteBase, unittest.TestCase):
+
+    def create_data(self):
+        penguin = Publisher.objects.create(name="Penguin")
+        random_house = Publisher.objects.create(name="Random House")
+        george_costanza = Author.objects.create(first_name="George", last_name="Costanza")
+
+        b1 = Book.objects.create(publisher=penguin, title="Book 1", id=1)
+        b2 = Book.objects.create(publisher=random_house, title="Book 2")
+
+
+    seeds_module = 'seeds.fk_dependencies'
+    expected = [
+      {
+        "pk": 1,
+        "model": "app.book",
+        "fields": {
+          "publisher": 1,
+          "authors": [],
+          "title": "Book 1"
+        }
+      }
+    ,
+      {
+        "pk": 1,
+        "model": "app.publisher",
+        "fields": {
+          "name": "Penguin"
+        }
+      }
+    ]
 
 if __name__ == "__main__":
-    runner = simple.DjangoTestSuiteRunner()
-    try:
-        old_config = runner.setup_databases()
-        unittest.main()
-    finally:
-        runner.teardown_databases(old_config)
+    unittest.main()

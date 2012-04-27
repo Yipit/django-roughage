@@ -2,4 +2,4 @@ init:
 	pip install -r requirements.txt --use-mirrors
 
 test:
-	nosetests tests
+	python tests/tests.py

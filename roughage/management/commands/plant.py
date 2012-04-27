@@ -15,6 +15,7 @@ class Command(BaseCommand):
     option_list = BaseCommand.option_list + (
         make_option("-d", "--database", dest="database", default="default", help='The database name to pull data from'),
         make_option("-f", "--file", dest="dest_file", default=None, help='The filename to put data in'),
+        make_option("-s", "--seeds", dest="seeds_module", default='seeds', help='The seeds module'),
     )
     
     def handle(self, *args, **options):
@@ -23,13 +24,15 @@ class Command(BaseCommand):
         self.database = options.get('database')
         self.dest_file = options.get('dest_file')
         
+        seed_module = options.get('seeds_module')
+        
         stream = options.get("stream")
         
         apps = settings.INSTALLED_APPS
         for app in apps:
             self.process_app(app)
         try:
-            seeds = import_module('seeds')
+            seeds = import_module(seed_module)
         except ImportError:
             pass
         else:

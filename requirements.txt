@@ -1,2 +1,3 @@
 nose
 django==1.4
+sure

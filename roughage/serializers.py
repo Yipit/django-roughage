@@ -24,7 +24,7 @@ class Serializer(JSONSerializer):
                 m2m_value = lambda value: smart_unicode(value._get_pk_val(), strings_only=True)
             dirt_key = model_namespace(field.rel.to)
             dirt = self.dirt
-            obj_set = dirt.soil.objects[dirt_key]
+            obj_set = dirt.soil.objects.get(dirt_key, set())
             self._current[field.name] = [m2m_value(related)
                                for related in getattr(obj, field.name).iterator() if related.id in obj_set]
     
