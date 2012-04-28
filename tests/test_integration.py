@@ -39,7 +39,7 @@ class RoughageTestSuiteBase(object):
         self.runner.teardown_databases(self.old_config)
     
     def create_data(self):
-        bob_johnson = Author.objects.create(first_name="Bob", last_name="Johnson")
+        bob_johnson = Author.objects.create(first_name="Bob", last_name="Johnson", id=1)
         bob_thorton = Author.objects.create(first_name="Bob", last_name="Thorton")
         george_costanza = Author.objects.create(first_name="George", last_name="Costanza")
 
@@ -262,6 +262,76 @@ class GetForeignKeys(RoughageTestSuiteBase, unittest.TestCase):
         }
       }
     ]
+
+class TrimM2M(RoughageTestSuiteBase, unittest.TestCase):
+    def create_data(self):
+        random_house = Publisher.objects.create(name="Random House")
+
+        b1 = Book.objects.create(publisher=random_house, title="Book 1")
+        b2 = Book.objects.create(publisher=random_house, title="Book 2")
+        b3 = Book.objects.create(publisher=random_house, title="Book 3")
+        BookReport.objects.create(grade=5, book=b1)
+        BookReport.objects.create(grade=10, book=b1)
+        BookReport.objects.create(grade=11, book=b1)
+        BookReport.objects.create(grade=100, book=b2)
+        BookReport.objects.create(grade=100, book=b3)
+
+
+    seeds_module = 'seeds.basic_branch'
+    expected = [
+      {
+        "pk": 1,
+        "model": "app.bookreport",
+        "fields": {
+          "grade": 5,
+          "book": 1
+        }
+      },
+      {
+        "pk": 2,
+        "model": "app.bookreport",
+        "fields": {
+          "grade": 10,
+          "book": 1
+        }
+      },
+      {
+        "pk": 4,
+        "model": "app.bookreport",
+        "fields": {
+          "grade": 100,
+          "book": 2
+        }
+      }
+    ,
+      {
+        "pk": 1,
+        "model": "app.book",
+        "fields": {
+          "publisher": 1,
+          "authors": [],
+          "title": "Book 1"
+        }
+      },
+      {
+        "pk": 2,
+        "model": "app.book",
+        "fields": {
+          "publisher": 1,
+          "authors": [],
+          "title": "Book 2"
+        }
+      }
+    ,
+      {
+        "pk": 1,
+        "model": "app.publisher",
+        "fields": {
+          "name": "Random House"
+        }
+      }
+    ]
+
 
 if __name__ == "__main__":
     unittest.main()
