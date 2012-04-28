@@ -23,6 +23,8 @@ class Command(BaseCommand):
         self.branches = {}
         self.database = options.get('database')
         
+        verbosity = int(options.get('verbosity', 1))
+        
         seed_module = options.get('seeds_module')
         stream = self.get_stream(options)
         
@@ -35,14 +37,16 @@ class Command(BaseCommand):
             pass
         else:
             self.process_module(seeds)
-        print >> sys.stderr, "Preparing to plant..."
-        print >> sys.stderr, "\tSeeds: %s" % self.seeds.values()
-        print >> sys.stderr, "\tBranches: %s" % self.branches.values()
-        print >> sys.stderr, "Now Growing..."
+        
+        if verbosity > 1:
+            print >> sys.stderr, "Preparing to plant..."
+            print >> sys.stderr, "\tSeeds: %s" % self.seeds.values()
+            print >> sys.stderr, "\tBranches: %s" % self.branches.values()
+            print >> sys.stderr, "Now Growing..."
         
         dirt = Dirt(self.database, self.seeds, self.branches)
         dirt.start_growing()
-        dirt.print_soil()
+        dirt.print_soil(verbosity)
         dirt.harvest(stream)
     
     def get_stream(self, options):

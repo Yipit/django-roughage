@@ -52,7 +52,9 @@ class Dirt(object):
             seed = seed_class(database=self.database, branches=self.branches)
             seed.grow()
     
-    def print_soil(self):
+    def print_soil(self, verbosity):
+        if not verbosity > 1:
+            return
         print >> sys.stderr, "The following have been planted:"
         sorted_keys = sorted(self.soil.objects.keys())
         for key in sorted_keys:
@@ -215,8 +217,6 @@ class Seed(BaseGrowth):
         self.branches = branches
     
     def grow(self):
-        print >> sys.stderr, "\tGrowing", unicode(self)
-        
         for queryset in self.querysets:
             self.add_queryset(queryset)
 
