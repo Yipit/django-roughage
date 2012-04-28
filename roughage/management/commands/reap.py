@@ -1,41 +1,24 @@
-import inspect
-import sys
-
 from optparse import make_option
 
-from django.conf import settings
-from django.core.management.base import BaseCommand
+from django.core.management.commands.loaddata import Command as LoadDataCommand
 from django.db.models import signals
-from django.db.models.loading import get_models, get_apps
 from django.dispatch.dispatcher import Signal
-from django.utils.importlib import import_module
-CONFIG_NAME = 'seeds'
 
-from roughage.base import Branch, Seed, Dirt
-from roughage.utils import model_namespace
-
-class Command(BaseCommand):
-
-    def handle(self, *args, **options):
+class Command(LoadDataCommand):
+    
+    option_list = BaseCommand.option_list + (
+        make_option("-d", "--no-signals", dest="use_signals", default=True, 
+            help='Disconnects all signals during import', action="store_false"),
+    )
+    
+    def disable_signals(self):
         clazz_names = [clazz_name for clazz_name in dir(signals) if not clazz_name.startswith ("__")]
         clazzes = [getattr(signals, clazz_name) for clazz_name in clazz_names]
         all_signals =  [clazz for clazz in clazzes if isinstance(clazz, Signal)]
         for signal in all_signals:
             signal.receivers = []
-
-        #~ Disable foreign key checks during fixture loading
-        from django.db import connections, DEFAULT_DB_ALIAS
-        connection = connections[DEFAULT_DB_ALIAS]
-        if 'mysql' in connection.settings_dict['ENGINE']:
-            cursor = connection.cursor()
-            cursor.execute('SET foreign_key_checks = 0')
-
-        #~ Load fixture
-        from django.core.management import call_command
-        call_command('loaddata', args[0], **options)
-
-        #~ Enable foreign key checks after fixture loading
-        if 'mysql' in connection.settings_dict['ENGINE']:
-            cursor = connection.cursor()
-            cursor.execute('SET foreign_key_checks = 1')
-        connection.close()
+    
+    def handle(self, *args, **options):
+        if options.get('use_signals'):
+            self.disable_signals()
+        return super(Command, self).handle(*args, **options)

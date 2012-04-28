@@ -10,9 +10,7 @@ class Serializer(JSONSerializer):
     def serialize(self, queryset, **options):
         if DIRT not in options:
             raise ValueError("You must pass `dirt` in to use the RoughageSerializer")
-        
         self.dirt = options.pop(DIRT)
-        
         return super(Serializer, self).serialize(queryset, **options)
         
     
