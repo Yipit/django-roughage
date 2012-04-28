@@ -94,19 +94,28 @@ class NonFollowedM2M(RoughageTestSuiteBase, unittest.TestCase):
     expected = [
       {
         "pk": 1,
-        "model": "app.book",
+        "model": "app.publisher",
         "fields": {
-          "publisher": 1,
-          "authors": [],
-          "title": "Book 1"
+          "name": "Random House"
         }
       }
     ,
       {
         "pk": 1,
-        "model": "app.publisher",
+        "model": "app.bookreport",
         "fields": {
-          "name": "Penguin"
+          "grade": 100,
+          "book": 1
+        }
+      }
+    ,
+      {
+        "pk": 1,
+        "model": "app.book",
+        "fields": {
+          "publisher": 1,
+          "authors": [],
+          "title": "Book 1"
         }
       }
     ]
