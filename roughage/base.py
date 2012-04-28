@@ -23,12 +23,10 @@ class GrowthMeta(type):
 class Soil(object):
     
     def __init__(self):
-        
-        self.objects = defaultdict(set)
-        self.branched = defaultdict(set)
-        self.trees = []
+        self.reset()
     
-    def clear(self):
+    def reset(self):
+        """Used in tests to reset global SOIL obj"""
         self.objects = defaultdict(set)
         self.branched = defaultdict(set)
         self.trees = []

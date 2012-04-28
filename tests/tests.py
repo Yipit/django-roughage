@@ -34,7 +34,7 @@ class RoughageTestSuiteBase(object):
         self.runner = simple.DjangoTestSuiteRunner()
         self.old_config = self.runner.setup_databases()
         self.create_data()
-        SOIL.clear()
+        SOIL.reset()
         
     
     def tearDown(self):

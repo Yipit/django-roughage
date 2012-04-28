@@ -22,11 +22,9 @@ class Command(BaseCommand):
         self.seeds = {}
         self.branches = {}
         self.database = options.get('database')
-        self.dest_file = options.get('dest_file')
         
         seed_module = options.get('seeds_module')
-        
-        stream = options.get("stream")
+        stream = self.get_stream(options)
         
         apps = settings.INSTALLED_APPS
         for app in apps:
@@ -46,7 +44,20 @@ class Command(BaseCommand):
         dirt.start_growing()
         dirt.print_soil()
         dirt.harvest(stream)
+    
+    def get_stream(self, options):
         
+        # command was called programatically.
+        # return the stream the was passed in
+        if options.get('stream'):
+            return options.get('stream')
+        
+        if options.get('dest_file'):
+            return open(dest_file, 'w')
+            
+        else:
+            return sys.stdout
+    
     def process_module(self, module):
         seeds = {}
         branches = {}
