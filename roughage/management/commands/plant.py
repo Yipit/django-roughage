@@ -56,7 +56,8 @@ class Command(BaseCommand):
         if options.get('stream'):
             return options.get('stream')
         
-        if options.get('dest_file'):
+        dest_file = options.get('dest_file')
+        if dest_file:
             return open(dest_file, 'w')
             
         else:

@@ -8,7 +8,6 @@ from django.core.management import call_command
 from django.core.management.commands.loaddata import Command as LoadDataCommand
 from django.db.models import signals
 from django.dispatch.dispatcher import Signal
-from django.conf import settings
 
 
 class Command(LoadDataCommand):

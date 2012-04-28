@@ -1,4 +1,4 @@
-from roughage import Seed, Branch
+from roughage import Seed
 
 from app.models import Author
 
