@@ -19,6 +19,6 @@ class Command(LoadDataCommand):
             signal.receivers = []
     
     def handle(self, *args, **options):
-        if options.get('use_signals'):
+        if not options.get('use_signals'):
             self.disable_signals()
         return super(Command, self).handle(*args, **options)
