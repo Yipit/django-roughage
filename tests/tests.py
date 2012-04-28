@@ -74,6 +74,44 @@ class RoughageTestSuiteBase(object):
 
         assert that(json.loads(actual_json)).equals(self.expected)
 
+
+class NonFollowedM2M(RoughageTestSuiteBase, unittest.TestCase):
+
+    def create_data(self):
+        bob_johnson = Author.objects.create(first_name="Bob", last_name="Johnson")
+        bob_thorton = Author.objects.create(first_name="Bob", last_name="Thorton")
+
+        random_house = Publisher.objects.create(name="Random House")
+        penguin = Publisher.objects.create(name="Penguin")
+
+        b1 = Book.objects.create(publisher=random_house, title="Book 1")
+        b1.authors.add(bob_johnson, bob_thorton)
+        
+        BookReport.objects.create(grade=100, book=b1)
+
+
+    seeds_module = 'seeds.non_followed_m2ms'
+    expected = [
+      {
+        "pk": 1,
+        "model": "app.book",
+        "fields": {
+          "publisher": 1,
+          "authors": [],
+          "title": "Book 1"
+        }
+      }
+    ,
+      {
+        "pk": 1,
+        "model": "app.publisher",
+        "fields": {
+          "name": "Penguin"
+        }
+      }
+    ]
+
+
 class FollowedM2Ms(RoughageTestSuiteBase, unittest.TestCase):
     
     seeds_module = 'seeds.followed_m2ms'
