@@ -5,15 +5,13 @@ import json
 import StringIO
 
 test_dir = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(os.path.join(test_dir, os.path.pardir))
+sys.path.insert(0, os.path.join(test_dir, os.path.pardir))
 os.environ["DJANGO_SETTINGS_MODULE"] = 'settings'
-
 
 from django.test import simple
 from django.core.management import call_command
 from app.models import Book, Author, Publisher, BookReport
 from sure import that
-
 from roughage.base import SOIL
 
 """
