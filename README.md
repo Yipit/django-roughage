@@ -1,33 +1,50 @@
-# django-roughage
-> Version 0.0.2
+### Install
+First install roughage:  `pip install django-roughage`
 
-# What
-
-It's an utility for fetching small subsets of data from your production servers to the local environment.
-
-# installing
-
-## first of all
-
-    pip install django-roughage
-
-## add it to your django project
-
-on settings.py
-
+Assume that your app/models.py looks like this
 ```python
-INSTALLED_APPS = (
-    ...
-    'roughage',
-    ...
-)
+class Book(models.Model):
+    
+    title = models.CharField(max_length=255)
+
+class BookReport(models.Model):
+    
+    book = models.ForeignKey(Book)
+    grade = models.IntegerField()
+```
+
+### Defining seeds.py
+Then you define a seeds.py like the following:
+```python
+from roughage import Seed, Branch
+from app.models import Book, BookReport
+
+class BookSeed(Seed):
+    
+    model = Book
+    
+    querysets = [
+        Book.objects.filter(id__lt=3)
+    ]
+
+class BookReportBranch(Branch):
+
+    model = BookReport
+
+    def trim_app__book(self, queryset):
+        return queryset[:2]
 
 ```
 
-# reaping
+### Planting and Reaping
+Then run
+```
+$ ./manage.py plant --seeds=seeds.py --file=dev_dump.json
+```
 
-    python manage.py reap
+dev_dump.json will contain all books with id < 3 and the first two book reports attached to those books.
 
-# planting
-
-    python manage.py plant
+You can now import this into another database with
+```
+$ ./manage.py reap dev_dump.json
+```
