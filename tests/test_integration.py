@@ -10,7 +10,7 @@ os.environ["DJANGO_SETTINGS_MODULE"] = 'settings'
 
 from django.test import simple
 from django.core.management import call_command
-from app.models import Book, Author, Publisher, BookReport
+from app.models import Book, Author, Publisher, BookReport, Pseudonym
 from sure import that
 from roughage.base import SOIL
 
@@ -71,6 +71,74 @@ class RoughageTestSuiteBase(object):
         print actual_json
 
         assert that(json.loads(actual_json)).equals(self.expected)
+
+
+class OneToOneDependants(RoughageTestSuiteBase, unittest.TestCase):
+
+    def create_data(self):
+        bob_johnson = Author.objects.create(first_name="Bob", last_name="Johnson")
+        bob_thorton = Author.objects.create(first_name="Bob", last_name="Thorton")
+        Pseudonym.objects.create(author=bob_thorton, name="Janky Joe")
+
+    seeds_module = 'seeds.one_to_one_dependants'
+    expected = [
+      {
+        "pk": 1,
+        "model": "app.pseudonym",
+        "fields": {
+          "name": "Janky Joe",
+          "author": 2
+        }
+      }
+    ,
+      {
+        "pk": 1,
+        "model": "app.author",
+        "fields": {
+          "first_name": "Bob",
+          "last_name": "Johnson"
+        }
+      },
+      {
+        "pk": 2,
+        "model": "app.author",
+        "fields": {
+          "first_name": "Bob",
+          "last_name": "Thorton"
+        }
+      }
+    ]
+
+
+class OneToOneDependencies(RoughageTestSuiteBase, unittest.TestCase):
+
+    def create_data(self):
+        bob_johnson = Author.objects.create(first_name="Bob", last_name="Johnson")
+        bob_thorton = Author.objects.create(first_name="Bob", last_name="Thorton")
+
+        Pseudonym.objects.create(author=bob_thorton, name="Janky Joe")
+
+    seeds_module = 'seeds.one_to_one_dependencies'
+    expected = [
+      {
+        "pk": 1,
+        "model": "app.pseudonym",
+        "fields": {
+          "name": "Janky Joe",
+          "author": 2
+        }
+      }
+    ,
+      {
+        "pk": 2,
+        "model": "app.author",
+        "fields": {
+          "first_name": "Bob",
+          "last_name": "Thorton"
+        }
+      }
+    ]
+
 
 
 class NonFollowedM2M(RoughageTestSuiteBase, unittest.TestCase):
