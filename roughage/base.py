@@ -173,7 +173,8 @@ class BaseGrowth(object):
             except ObjectDoesNotExist:
                 continue
             else:
-                self.add_to_soil(_obj)
+                if _obj is not None:
+                    self.add_to_soil(_obj)
     
     def add_to_soil(self, obj):
         """
