@@ -239,6 +239,10 @@ class Branch(BaseGrowth):
             # that doesn't actually exist in the database
             return
         
+        # Exception for OneToOneField that returns None
+        if base is None:
+            return
+        
         # If base is a manager, try to reduce the query
         if isinstance(base, Manager):
             base_manager = base.using(self.database).all()
