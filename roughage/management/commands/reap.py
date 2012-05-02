@@ -51,7 +51,7 @@ class Command(LoadDataCommand):
     
     def handle(self, *args, **options):
         
-        call_command('syncdb')
+        call_command('syncdb', interactive=False)
         
         if 'south' in settings.INSTALLED_APPS:
             filename = args[0]
