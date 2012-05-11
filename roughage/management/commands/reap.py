@@ -4,6 +4,8 @@ from collections import defaultdict
 from optparse import make_option
 
 from django.conf import settings
+from django.contrib.auth.management import create_permissions
+from django.contrib.contenttypes.management import update_contenttypes
 from django.core.management import call_command
 from django.core.management.commands.loaddata import Command as LoadDataCommand
 from django.db.models import signals
@@ -13,7 +15,7 @@ from django.dispatch.dispatcher import Signal
 class Command(LoadDataCommand):
     
     option_list = LoadDataCommand.option_list + (
-        make_option("-d", "--no-signals", dest="use_signals", default=True, 
+        make_option("-d", "--no-signals", dest="use_signals", default=True,
             help='Disconnects all signals during import', action="store_false"),
     )
     
@@ -43,14 +45,16 @@ class Command(LoadDataCommand):
         return migrations
     
     def disable_signals(self):
-        clazz_names = [clazz_name for clazz_name in dir(signals) if not clazz_name.startswith ("__")]
+        clazz_names = [clazz_name for clazz_name in dir(signals) if not clazz_name.startswith("__")]
         clazzes = [getattr(signals, clazz_name) for clazz_name in clazz_names]
-        all_signals =  [clazz for clazz in clazzes if isinstance(clazz, Signal)]
+        all_signals = [clazz for clazz in clazzes if isinstance(clazz, Signal)]
         for signal in all_signals:
             signal.receivers = []
     
     def handle(self, *args, **options):
         
+        signals.post_syncdb.disconnect(update_contenttypes)
+        signals.post_syncdb.disconnect(create_permissions, dispatch_uid="django.contrib.auth.management.create_permissions")
         call_command('syncdb', interactive=False)
         
         if 'south' in settings.INSTALLED_APPS:
@@ -81,6 +85,10 @@ class Command(LoadDataCommand):
             self.disable_signals()
         
         super(Command, self).handle(*args, **options)
+        
+        signals.post_syncdb.connect(update_contenttypes)
+        signals.post_syncdb.connect(create_permissions, dispatch_uid="django.contrib.auth.management.create_permissions")
+        call_command('syncdb')
         
         # if 'south' in settings.INSTALLED_APPS:
         #     call_command('migrate')
