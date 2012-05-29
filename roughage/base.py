@@ -166,7 +166,10 @@ class BaseGrowth(object):
                     for _obj in objs:
                         self.add_to_soil(_obj)
         
-        one2ones = [related.var_name for related in obj._meta.get_all_related_objects() if isinstance(related.field, models.OneToOneField)]
+        one2ones = [related.get_accessor_name()
+                    for related in obj._meta.get_all_related_objects()
+                    if isinstance(related.field, models.OneToOneField)
+                ]
         for one2one in one2ones:
             try:
                 _obj = getattr(obj, one2one)
