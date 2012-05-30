@@ -6,6 +6,7 @@ from optparse import make_option
 from django.conf import settings
 from django.contrib.auth.management import create_permissions
 from django.contrib.contenttypes.management import update_contenttypes
+from django.contrib.contenttypes.models import ContentType
 from django.core.management import call_command
 from django.core.management.commands.loaddata import Command as LoadDataCommand
 from django.db.models import signals
@@ -83,7 +84,10 @@ class Command(LoadDataCommand):
         
         if not options.pop('use_signals'):
             self.disable_signals()
-        
+
+        # Delete all content types that were created whil migrating. They will get recreated post loaddate
+        ContentType.objects.all().delete()
+
         super(Command, self).handle(*args, **options)
         
         signals.post_syncdb.connect(update_contenttypes)
