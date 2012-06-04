@@ -188,8 +188,6 @@ class BaseGrowth(object):
         key = model_namespace(obj)
         if obj.id in self.soil.objects[key]:
             return
-        if self.parent and self.parent.__class__ == obj.__class__:
-            return
         
         self.soil.objects[key].add(obj.id)
         if key in self.branches and not obj.id in self.soil.branched[key]:
