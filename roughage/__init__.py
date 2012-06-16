@@ -2,6 +2,6 @@ from django.core.serializers import register_serializer
 
 register_serializer('roughage', 'roughage.serializers')
 
-from roughage.base import Seed, Branch
+from roughage.base import Seed
 
-__all__ = [Seed, Branch]
+__all__ = [Seed]

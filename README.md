@@ -4,11 +4,11 @@ First install roughage:  `pip install django-roughage`
 Assume that your app/models.py looks like this
 ```python
 class Book(models.Model):
-    
+
     title = models.CharField(max_length=255)
 
 class BookReport(models.Model):
-    
+
     book = models.ForeignKey(Book)
     grade = models.IntegerField()
 ```
@@ -16,18 +16,18 @@ class BookReport(models.Model):
 ### Defining seeds.py
 Then you define a seeds.py like the following:
 ```python
-from roughage import Seed, Branch
+from roughage import Seed
 from app.models import Book, BookReport
 
 class BookSeed(Seed):
-    
+
     model = Book
-    
+
     querysets = [
         Book.objects.filter(id__lt=3)
     ]
 
-class BookReportBranch(Branch):
+class BookReportSeed(Seed):
 
     model = BookReport
 

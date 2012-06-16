@@ -1,4 +1,4 @@
-from roughage import Seed, Branch
+from roughage import Seed
 
 from app.models import Book, BookReport
 
@@ -12,7 +12,7 @@ class BookSeed(Seed):
     ]
 
 
-class BookReportBranch(Branch):
+class BookReportSeed(Seed):
 
     model = BookReport
 

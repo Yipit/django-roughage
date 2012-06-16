@@ -11,7 +11,7 @@ from django.db.models import Manager
 
 
 class GrowthMeta(type):
-    
+
     def __new__(cls, name, bases, attrs):
         model = attrs.get('model')
         if isinstance(model, basestring):
@@ -21,37 +21,36 @@ class GrowthMeta(type):
 
 
 class Soil(object):
-    
+
     def __init__(self):
         self.reset()
-    
+
     def reset(self):
         """Used in tests to reset global SOIL obj"""
         self.objects = defaultdict(set)
-        self.branched = defaultdict(set)
+        self.seeded = defaultdict(set)
         self.trees = []
 
 SOIL = Soil()
 
 
 class Dirt(object):
-    
+
     CHUNK_SIZE = 100
-    
-    def __init__(self, database, seeds, branches):
+
+    def __init__(self, database, seeds):
         self.database = database
         self.soil = SOIL
         self.seeds = seeds
-        self.branches = branches
-    
+
     def __unicode__(self):
         return u"Dirt: %s" % self.soil
-    
+
     def start_growing(self):
         for seed_model, seed_class in self.seeds.iteritems():
-            seed = seed_class(database=self.database, branches=self.branches)
+            seed = seed_class(database=self.database, seeds=self.seeds)
             seed.grow()
-    
+
     def print_soil(self, verbosity):
         if not verbosity > 1:
             return
@@ -60,17 +59,15 @@ class Dirt(object):
         for key in sorted_keys:
             object_count = len(self.soil.objects[key])
             print >> sys.stderr, "\t%s:%s" % (key, object_count)
-    
+
     def _harvest(self):
         format = "roughage"
         for key, pk_set in self.soil.objects.iteritems():
             model = get_model_from_key(key)
             key = model_namespace(model)
-            
+
             if self.seeds.get(key):
                 wash_func = self.seeds.get(key).wash
-            elif self.branches.get(key):
-                wash_func = self.branches.get(key).wash
             else:
                 wash_func = None
             for chunk in chunks(list(pk_set), self.CHUNK_SIZE):
@@ -80,7 +77,7 @@ class Dirt(object):
                         wash_func(obj)
                 data = serializers.serialize(format, objects, ensure_ascii=True, indent=2, dirt=self)
                 yield data
-    
+
     def harvest(self, stream):
         stream.write("[")
         for index, objects in enumerate(self._harvest()):
@@ -91,60 +88,60 @@ class Dirt(object):
         stream.write('\n')
 
 
-class BaseGrowth(object):
-    
+class Seed(object):
+
     __metaclass__ = GrowthMeta
-    
+
     soil = SOIL
     wash = None
-    
-    def __init__(self, database, seeds, branches, parent_model=None, ids_from_parent=None):
+    querysets = []
+
+    def __init__(self, database, seeds, name=None, parent=None, ids_from_parent=None):
         self.database = database
         self.seeds = seeds
-        self.branches = branches
-    
+        self.parent = parent
+        self.name = name
+
     def __unicode__(self):
         return u"%s" % self.__class__.__name__
-    
-    def get_branches(self, obj):
+
+    def get_related_seeds(self, obj):
         """
-        Return branches for classes that ForeignKey to obj
-        
-        NOT DEPENDENT ON WHICH GROWTH WE ARE IN. THAT SEEMS BAD
+        Return seeds for classes that ForeignKey to obj
         """
-        
+
         model = obj.__class__
         related_objects = model._meta.get_all_related_objects()
-        branches = {}
+        seeds = {}
         for related_object in related_objects:
             related_model = related_object.model
             key = model_namespace(related_model)
-            branch = self.branches.get(key)
-            if branch:
-                branches[related_object.get_accessor_name()] = branch
-        
-        return branches
-    
+            seed = self.seeds.get(key)
+            if seed:
+                seeds[related_object.get_accessor_name()] = seed
+
+        return seeds
+
     def add_depends_on(self, obj, add_m2ms=False):
         """
         Get all obects that obj depends on.
-        
+
         If obj is an instance on the model for the current Growth,
         follow m2m relationships. Otherwise, don't get the m2m'd
         models neccessarily
         """
-        
+
         # Only follow m2ms for models with branches or seeds
         if obj.__class__ == self.model:
             add_m2ms = True
-        
+
         fields_to_get = [field.name for field in obj._meta.fields if isinstance(field, models.ForeignKey)]
         dependant_on = [getattr(obj, name) for name in fields_to_get]
         for _obj in dependant_on:
             if _obj:
                 self.add_to_soil(_obj)
-        
-        # Only follow m2ms for models with branches or seeds
+
+        # Only follow m2ms for models with seeds
         if add_m2ms:
             m2ms = obj._meta.many_to_many
             for m2m in m2ms:
@@ -165,7 +162,7 @@ class BaseGrowth(object):
                     objs = m2m.rel.through.objects.using(self.database).filter(**{m2m.related_query_name(): obj})
                     for _obj in objs:
                         self.add_to_soil(_obj)
-        
+
         one2ones = [related.get_accessor_name()
                     for related in obj._meta.get_all_related_objects()
                     if isinstance(related.field, models.OneToOneField)
@@ -178,29 +175,29 @@ class BaseGrowth(object):
             else:
                 if _obj is not None:
                     self.add_to_soil(_obj)
-    
+
     def add_to_soil(self, obj):
         """
         Put obj in the soil for the correct name space
         for later retrieval and serialization
         """
-        
+
         key = model_namespace(obj)
         if obj.id in self.soil.objects[key]:
             return
-        
+
         self.soil.objects[key].add(obj.id)
-        if key in self.branches and not obj.id in self.soil.branched[key]:
-            self.soil.branched[key].add(obj.id)
+        if key in self.seeds and not obj.id in self.soil.seeded[key]:
+            self.soil.seeded[key].add(obj.id)
             add_m2ms = True
         else:
             add_m2ms = False
-        
+
         self.add_depends_on(obj, add_m2ms)
-        branches = self.get_branches(obj)
-        for name, branch in branches.items():
-            branch(self.database, obj, name, self.branches).grow()
-        
+        seeds = self.get_related_seeds(obj)
+        for name, seed in seeds.items():
+            seed(database=self.database, seeds=self.seeds, name=name, parent=obj).branch_out()
+
     def add_queryset(self, queryset):
         """
         Add all objs in the queryset to the soil
@@ -208,31 +205,15 @@ class BaseGrowth(object):
         for obj in queryset.using(self.database):
             self.add_to_soil(obj)
 
-
-class Seed(BaseGrowth):
-    
-    querysets = []
-    parent = None
-    
-    def __init__(self, database, branches):
-        self.database = database
-        self.branches = branches
-    
     def grow(self):
         for queryset in self.querysets:
             self.add_queryset(queryset)
 
+    def branch_out(self):
+        """
+        Grow out all of the objects that depend on self.parent
+        """
 
-class Branch(BaseGrowth):
-    
-    def __init__(self, database, parent, name, branches):
-        self.database = database
-        self.parent = parent
-        self.name = name
-        self.branches = branches
-    
-    def grow(self):
-        
         # Get the related object or manager
         try:
             base = getattr(self.parent, self.name)
@@ -240,11 +221,11 @@ class Branch(BaseGrowth):
             # if we get an ObjectDoesNotExists, it was a OneToOne
             # that doesn't actually exist in the database
             return
-        
+
         # Exception for OneToOneField that returns None
         if base is None:
             return
-        
+
         # If base is a manager, try to reduce the query
         if isinstance(base, Manager):
             base_manager = base.using(self.database).all()
@@ -252,7 +233,7 @@ class Branch(BaseGrowth):
                 reducer = getattr(self, "trim_%s" % model_namespace(self.parent))
             except AttributeError:
                 reducer = lambda queryset: queryset.none()
-        
+
             queryset = reducer(base_manager)
             self.add_queryset(queryset)
         # Otherwise base is a object from the OneToOne relation
