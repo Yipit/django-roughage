@@ -27,17 +27,16 @@ Objects with OneToOne dependencies are added when the dependencies are added
 
 
 class RoughageTestSuiteBase(object):
-    
+
     def setUp(self):
         self.runner = simple.DjangoTestSuiteRunner()
         self.old_config = self.runner.setup_databases()
         self.create_data()
         SOIL.reset()
-        
-    
+
     def tearDown(self):
         self.runner.teardown_databases(self.old_config)
-    
+
     def create_data(self):
         bob_johnson = Author.objects.create(first_name="Bob", last_name="Johnson", id=1)
         bob_thorton = Author.objects.create(first_name="Bob", last_name="Thorton")
@@ -61,7 +60,7 @@ class RoughageTestSuiteBase(object):
         b5 = Book.objects.create(publisher=penguin, title="Book 5")
         b5.authors.add(bob_johnson, bob_thorton, george_costanza)
 
-        b6 = Book.objects.create(publisher=penguin, title="Ghost Protocol")
+        Book.objects.create(publisher=penguin, title="Ghost Protocol")
 
     def test_plant(self):
         stream = StringIO.StringIO()
@@ -76,7 +75,7 @@ class RoughageTestSuiteBase(object):
 class OneToOneDependants(RoughageTestSuiteBase, unittest.TestCase):
 
     def create_data(self):
-        bob_johnson = Author.objects.create(first_name="Bob", last_name="Johnson")
+        Author.objects.create(first_name="Bob", last_name="Johnson")
         bob_thorton = Author.objects.create(first_name="Bob", last_name="Thorton")
         Pseudonym.objects.create(author=bob_thorton, name="Janky Joe")
 
@@ -89,8 +88,7 @@ class OneToOneDependants(RoughageTestSuiteBase, unittest.TestCase):
           "name": "Janky Joe",
           "author": 2
         }
-      }
-    ,
+      },
       {
         "pk": 1,
         "model": "app.author",
@@ -106,14 +104,14 @@ class OneToOneDependants(RoughageTestSuiteBase, unittest.TestCase):
           "first_name": "Bob",
           "last_name": "Thorton"
         }
-      }
+      },
     ]
 
 
 class OneToOneDependencies(RoughageTestSuiteBase, unittest.TestCase):
 
     def create_data(self):
-        bob_johnson = Author.objects.create(first_name="Bob", last_name="Johnson")
+        Author.objects.create(first_name="Bob", last_name="Johnson")
         bob_thorton = Author.objects.create(first_name="Bob", last_name="Thorton")
 
         Pseudonym.objects.create(author=bob_thorton, name="Janky Joe")
@@ -127,8 +125,7 @@ class OneToOneDependencies(RoughageTestSuiteBase, unittest.TestCase):
           "name": "Janky Joe",
           "author": 2
         }
-      }
-    ,
+      },
       {
         "pk": 2,
         "model": "app.author",
@@ -140,7 +137,6 @@ class OneToOneDependencies(RoughageTestSuiteBase, unittest.TestCase):
     ]
 
 
-
 class NonFollowedM2M(RoughageTestSuiteBase, unittest.TestCase):
 
     def create_data(self):
@@ -148,13 +144,12 @@ class NonFollowedM2M(RoughageTestSuiteBase, unittest.TestCase):
         bob_thorton = Author.objects.create(first_name="Bob", last_name="Thorton")
 
         random_house = Publisher.objects.create(name="Random House")
-        penguin = Publisher.objects.create(name="Penguin")
+        Publisher.objects.create(name="Penguin")
 
         b1 = Book.objects.create(publisher=random_house, title="Book 1")
         b1.authors.add(bob_johnson, bob_thorton)
-        
-        BookReport.objects.create(grade=100, book=b1)
 
+        BookReport.objects.create(grade=100, book=b1)
 
     seeds_module = 'seeds.non_followed_m2ms'
     expected = [
@@ -164,8 +159,7 @@ class NonFollowedM2M(RoughageTestSuiteBase, unittest.TestCase):
         "fields": {
           "name": "Random House"
         }
-      }
-    ,
+      },
       {
         "pk": 1,
         "model": "app.bookreport",
@@ -173,8 +167,7 @@ class NonFollowedM2M(RoughageTestSuiteBase, unittest.TestCase):
           "grade": 100,
           "book": 1
         }
-      }
-    ,
+      },
       {
         "pk": 1,
         "model": "app.book",
@@ -183,12 +176,12 @@ class NonFollowedM2M(RoughageTestSuiteBase, unittest.TestCase):
           "authors": [],
           "title": "Book 1"
         }
-      }
+      },
     ]
 
 
 class FollowedM2Ms(RoughageTestSuiteBase, unittest.TestCase):
-    
+
     seeds_module = 'seeds.followed_m2ms'
     expected = [
       {
@@ -206,8 +199,7 @@ class FollowedM2Ms(RoughageTestSuiteBase, unittest.TestCase):
           "first_name": "Bob",
           "last_name": "Thorton"
         }
-      }
-    ,
+      },
       {
         "pk": 1,
         "model": "app.book",
@@ -219,8 +211,7 @@ class FollowedM2Ms(RoughageTestSuiteBase, unittest.TestCase):
           ],
           "title": "Book 1"
         }
-      }
-    ,
+      },
       {
         "pk": 1,
         "model": "app.publisher",
@@ -236,11 +227,10 @@ class GetForeignKeys(RoughageTestSuiteBase, unittest.TestCase):
     def create_data(self):
         penguin = Publisher.objects.create(name="Penguin")
         random_house = Publisher.objects.create(name="Random House")
-        george_costanza = Author.objects.create(first_name="George", last_name="Costanza")
+        Author.objects.create(first_name="George", last_name="Costanza")
 
-        b1 = Book.objects.create(publisher=penguin, title="Book 1", id=1)
-        b2 = Book.objects.create(publisher=random_house, title="Book 2")
-
+        Book.objects.create(publisher=penguin, title="Book 1", id=1)
+        Book.objects.create(publisher=random_house, title="Book 2")
 
     seeds_module = 'seeds.fk_dependencies'
     expected = [
@@ -252,8 +242,7 @@ class GetForeignKeys(RoughageTestSuiteBase, unittest.TestCase):
           "authors": [],
           "title": "Book 1"
         }
-      }
-    ,
+      },
       {
         "pk": 1,
         "model": "app.publisher",
@@ -262,6 +251,7 @@ class GetForeignKeys(RoughageTestSuiteBase, unittest.TestCase):
         }
       }
     ]
+
 
 class TrimM2M(RoughageTestSuiteBase, unittest.TestCase):
     def create_data(self):
@@ -275,7 +265,6 @@ class TrimM2M(RoughageTestSuiteBase, unittest.TestCase):
         BookReport.objects.create(grade=11, book=b1)
         BookReport.objects.create(grade=100, book=b2)
         BookReport.objects.create(grade=100, book=b3)
-
 
     seeds_module = 'seeds.basic_branch'
     expected = [
@@ -302,8 +291,7 @@ class TrimM2M(RoughageTestSuiteBase, unittest.TestCase):
           "grade": 100,
           "book": 2
         }
-      }
-    ,
+      },
       {
         "pk": 1,
         "model": "app.book",
@@ -321,8 +309,7 @@ class TrimM2M(RoughageTestSuiteBase, unittest.TestCase):
           "authors": [],
           "title": "Book 2"
         }
-      }
-    ,
+      },
       {
         "pk": 1,
         "model": "app.publisher",

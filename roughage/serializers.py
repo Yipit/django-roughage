@@ -5,15 +5,15 @@ from roughage.utils import model_namespace
 
 DIRT = 'dirt'
 
+
 class Serializer(JSONSerializer):
-    
+
     def serialize(self, queryset, **options):
         if DIRT not in options:
             raise ValueError("You must pass `dirt` in to use the RoughageSerializer")
         self.dirt = options.pop(DIRT)
         return super(Serializer, self).serialize(queryset, **options)
-        
-    
+
     def handle_m2m_field(self, obj, field):
         if field.rel.through._meta.auto_created:
             if self.use_natural_keys and hasattr(field.rel.to, 'natural_key'):
@@ -25,4 +25,3 @@ class Serializer(JSONSerializer):
             obj_set = dirt.soil.objects.get(dirt_key, set())
             self._current[field.name] = [m2m_value(related)
                                for related in getattr(obj, field.name).iterator() if related.id in obj_set]
-    
