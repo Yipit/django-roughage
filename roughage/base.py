@@ -1,23 +1,23 @@
 import sys
-
 from collections import defaultdict
 
-from .utils import chunks, model_namespace, get_model_from_key
 from django.db import models
 from django.core import serializers
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models.loading import get_model
 from django.db.models import Manager
 
+from .utils import chunks, model_namespace, get_model_from_key
 
-class GrowthMeta(type):
+
+class SeedMeta(type):
 
     def __new__(cls, name, bases, attrs):
         model = attrs.get('model')
         if isinstance(model, basestring):
             app, model = attrs.get('model').split(".")
             attrs['model'] = get_model(app, model)
-        return super(GrowthMeta, cls).__new__(cls, name, bases, attrs)
+        return super(SeedMeta, cls).__new__(cls, name, bases, attrs)
 
 
 class Soil(object):
@@ -90,7 +90,7 @@ class Dirt(object):
 
 class Seed(object):
 
-    __metaclass__ = GrowthMeta
+    __metaclass__ = SeedMeta
 
     soil = SOIL
     wash = None
@@ -104,6 +104,17 @@ class Seed(object):
 
     def __unicode__(self):
         return u"%s" % self.__class__.__name__
+
+    def grow(self):
+        for queryset in self.querysets:
+            self.add_queryset(queryset)
+
+    def add_queryset(self, queryset):
+        """
+        Add all objs in the queryset to the soil
+        """
+        for obj in queryset.using(self.database):
+            self.add_to_soil(obj)
 
     def get_related_seeds(self, obj):
         """
@@ -126,43 +137,49 @@ class Seed(object):
         """
         Get all obects that obj depends on.
 
-        If obj is an instance on the model for the current Growth,
+        If obj is an instance on the model for the current Seed,
         follow m2m relationships. Otherwise, don't get the m2m'd
         models neccessarily
         """
 
-        # Only follow m2ms for models with branches or seeds
-        if obj.__class__ == self.model:
-            add_m2ms = True
+        self.add_dependants(obj)
 
-        fields_to_get = [field.name for field in obj._meta.fields if isinstance(field, models.ForeignKey)]
+        # Only follow m2ms for models with seeds
+        if add_m2ms or obj.__class__ == self.model:
+            self.add_m2ms(obj)
+
+        self.add_one2ones(obj)
+
+    def add_dependants(self, obj):
+        fields_to_get = [field.name for field in obj._meta.fields
+                                    if isinstance(field, models.ForeignKey)]
         dependant_on = [getattr(obj, name) for name in fields_to_get]
         for _obj in dependant_on:
             if _obj:
                 self.add_to_soil(_obj)
 
-        # Only follow m2ms for models with seeds
-        if add_m2ms:
-            m2ms = obj._meta.many_to_many
-            for m2m in m2ms:
-                capture_m2m_objects = True
-                capture_join = False
-                if m2m.rel.to == obj.__class__:
-                    capture_m2m_objects = False
-                    capture_join = True
-                if not capture_join:
-                    capture_join = m2m.rel.through._meta.auto_created
-                if capture_m2m_objects:
-                    objs = getattr(obj, m2m.name)
-                    for _obj in objs.using(self.database).all():
-                        self.add_to_soil(_obj)
-                # If the m2m through table was manually declared django serializes
-                # differently, so we need to account for that
-                if not capture_join:
-                    objs = m2m.rel.through.objects.using(self.database).filter(**{m2m.related_query_name(): obj})
-                    for _obj in objs:
-                        self.add_to_soil(_obj)
+    def add_m2ms(self, obj):
+        m2ms = obj._meta.many_to_many
+        for m2m in m2ms:
+            capture_m2m_objects = True
+            capture_join = False
+            if m2m.rel.to == obj.__class__:
+                capture_m2m_objects = False
+                capture_join = True
+            if not capture_join:
+                capture_join = m2m.rel.through._meta.auto_created
+            if capture_m2m_objects:
+                objs = getattr(obj, m2m.name)
+                for _obj in objs.using(self.database).all():
+                    self.add_to_soil(_obj)
+            # If the m2m through table was manually declared django serializes
+            # differently, so we need to account for that
+            if not capture_join:
+                objs = m2m.rel.through.objects.using(self.database).filter(**{m2m.related_query_name(): obj})
+                for _obj in objs:
+                    self.add_to_soil(_obj)
 
+    def add_one2ones(self, obj):
         one2ones = [related.get_accessor_name()
                     for related in obj._meta.get_all_related_objects()
                     if isinstance(related.field, models.OneToOneField)
@@ -197,17 +214,6 @@ class Seed(object):
         seeds = self.get_related_seeds(obj)
         for name, seed in seeds.items():
             seed(database=self.database, seeds=self.seeds, name=name, parent=obj).branch_out()
-
-    def add_queryset(self, queryset):
-        """
-        Add all objs in the queryset to the soil
-        """
-        for obj in queryset.using(self.database):
-            self.add_to_soil(obj)
-
-    def grow(self):
-        for queryset in self.querysets:
-            self.add_queryset(queryset)
 
     def branch_out(self):
         """
