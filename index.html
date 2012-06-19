@@ -1,0 +1,97 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>Django-roughage by Yipit</title>
+
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+  </head>
+  <body>
+    <div class="wrapper">
+      <header>
+        <h1>Django-roughage</h1>
+        <p>A logically-consistent database sampler based on poop jokes</p>
+        <p class="view"><a href="https://github.com/Yipit/django-roughage">View the Project on GitHub <small>Yipit/django-roughage</small></a></p>
+        <ul>
+          <li><a href="https://github.com/Yipit/django-roughage/zipball/master">Download <strong>ZIP File</strong></a></li>
+          <li><a href="https://github.com/Yipit/django-roughage/tarball/master">Download <strong>TAR Ball</strong></a></li>
+          <li><a href="https://github.com/Yipit/django-roughage">View On <strong>GitHub</strong></a></li>
+        </ul>
+      </header>
+      <section>
+        <h3>Install</h3>
+
+<p>First install roughage:  <code>pip install django-roughage</code></p>
+
+<p>Assume that your app/models.py looks like this</p>
+
+<div class="highlight">
+<pre><span class="k">class</span> <span class="nc">Book</span><span class="p">(</span><span class="n">models</span><span class="o">.</span><span class="n">Model</span><span class="p">):</span>
+
+    <span class="n">title</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span><span class="n">max_length</span><span class="o">=</span><span class="mi">255</span><span class="p">)</span>
+
+<span class="k">class</span> <span class="nc">BookReport</span><span class="p">(</span><span class="n">models</span><span class="o">.</span><span class="n">Model</span><span class="p">):</span>
+
+    <span class="n">book</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">ForeignKey</span><span class="p">(</span><span class="n">Book</span><span class="p">)</span>
+    <span class="n">grade</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">IntegerField</span><span class="p">()</span>
+</pre>
+</div>
+
+
+<h3>Defining seeds.py</h3>
+
+<p>Then you define a seeds.py like the following:</p>
+
+<div class="highlight">
+<pre><span class="kn">from</span> <span class="nn">roughage</span> <span class="kn">import</span> <span class="n">Seed</span>
+<span class="kn">from</span> <span class="nn">app.models</span> <span class="kn">import</span> <span class="n">Book</span><span class="p">,</span> <span class="n">BookReport</span>
+
+<span class="k">class</span> <span class="nc">BookSeed</span><span class="p">(</span><span class="n">Seed</span><span class="p">):</span>
+
+    <span class="n">model</span> <span class="o">=</span> <span class="n">Book</span>
+
+    <span class="k">def</span> <span class="nf">querysets</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">[</span>
+            <span class="n">Book</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">id__lt</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+        <span class="p">]</span>
+
+<span class="k">class</span> <span class="nc">BookReportSeed</span><span class="p">(</span><span class="n">Seed</span><span class="p">):</span>
+
+    <span class="n">model</span> <span class="o">=</span> <span class="n">BookReport</span>
+
+    <span class="k">def</span> <span class="nf">trim_app__book</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">queryset</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">queryset</span><span class="p">[:</span><span class="mi">2</span><span class="p">]</span>
+
+</pre>
+</div>
+
+
+<h3>Planting and Reaping</h3>
+
+<p>Then run</p>
+
+<pre><code>$ ./manage.py plant --seeds=seeds.py --file=dev_dump.json
+</code></pre>
+
+<p>dev_dump.json will contain all books with id &lt; 3 and the first two book reports attached to those books.</p>
+
+<p>You can now import this into another database with</p>
+
+<pre><code>$ ./manage.py reap dev_dump.json
+</code></pre>
+      </section>
+      <footer>
+        <p>This project is maintained by <a href="https://github.com/Yipit">Yipit</a></p>
+        <p><small>Hosted on GitHub Pages &mdash; Theme by <a href="https://github.com/orderedlist">orderedlist</a></small></p>
+      </footer>
+    </div>
+    <script src="javascripts/scale.fix.js"></script>
+    
+  </body>
+</html>
