@@ -7,6 +7,7 @@ class AuthorSeed(Seed):
 
     model = Author
 
-    querysets = [
-        Author.objects.all()
-    ]
+    def querysets(self):
+        return [
+            Author.objects.all()
+        ]

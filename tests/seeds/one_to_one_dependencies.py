@@ -7,6 +7,7 @@ class BookSeed(Seed):
 
     model = Pseudonym
 
-    querysets = [
-        Pseudonym.objects.all()
-    ]
+    def querysets(self):
+        return [
+            Pseudonym.objects.all()
+        ]

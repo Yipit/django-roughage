@@ -94,7 +94,6 @@ class Seed(object):
 
     soil = SOIL
     wash = None
-    querysets = []
 
     def __init__(self, database, seeds, name=None, parent=None, ids_from_parent=None):
         self.database = database
@@ -105,8 +104,11 @@ class Seed(object):
     def __unicode__(self):
         return u"%s" % self.__class__.__name__
 
+    def querysets(self):
+        return []
+
     def grow(self):
-        for queryset in self.querysets:
+        for queryset in self.querysets():
             self.add_queryset(queryset)
 
     def add_queryset(self, queryset):

@@ -7,6 +7,7 @@ class BookSeed(Seed):
 
     model = BookReport
 
-    querysets = [
-        BookReport.objects.filter(id=1)
-    ]
+    def querysets(self):
+        return [
+            BookReport.objects.filter(id=1)
+        ]

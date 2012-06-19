@@ -7,9 +7,10 @@ class BookSeed(Seed):
 
     model = Book
 
-    querysets = [
-        Book.objects.filter(id__lt=3)
-    ]
+    def querysets(self):
+        return [
+            Book.objects.filter(id__lt=3)
+        ]
 
 
 class BookReportSeed(Seed):
