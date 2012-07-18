@@ -1,3 +1,4 @@
+import inspect
 import sys
 
 from optparse import make_option
@@ -66,7 +67,7 @@ class Command(BaseCommand):
         real_clazzes = [clazz for clazz in dir(module) if not clazz.startswith("__")]
         for name in real_clazzes:
             obj = getattr(module, name)
-            if (obj != Seed) and issubclass(obj, Seed):
+            if inspect.isclass(obj) and (obj != Seed) and issubclass(obj, Seed):
                 seeds[model_namespace(obj.model)] = obj
         self.seeds.update(seeds)
 
