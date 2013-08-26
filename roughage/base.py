@@ -202,12 +202,12 @@ class Seed(object):
         """
 
         key = model_namespace(obj)
-        if obj.id in self.soil.objects[key]:
+        if obj.pk in self.soil.objects[key]:
             return
 
-        self.soil.objects[key].add(obj.id)
-        if key in self.seeds and not obj.id in self.soil.seeded[key]:
-            self.soil.seeded[key].add(obj.id)
+        self.soil.objects[key].add(obj.pk)
+        if key in self.seeds and not obj.pk in self.soil.seeded[key]:
+            self.soil.seeded[key].add(obj.pk)
             add_m2ms = True
         else:
             add_m2ms = False

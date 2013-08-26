@@ -9,5 +9,5 @@ class BookSeed(Seed):
 
     def querysets(self):
         return [
-            Book.objects.filter(id=1)
+            Book.objects.filter(pk=1)
         ]

@@ -38,7 +38,7 @@ class RoughageTestSuiteBase(object):
         self.runner.teardown_databases(self.old_config)
 
     def create_data(self):
-        bob_johnson = Author.objects.create(first_name="Bob", last_name="Johnson", id=1)
+        bob_johnson = Author.objects.create(first_name="Bob", last_name="Johnson", pk=1)
         bob_thorton = Author.objects.create(first_name="Bob", last_name="Thorton")
         george_costanza = Author.objects.create(first_name="George", last_name="Costanza")
 
@@ -229,7 +229,7 @@ class GetForeignKeys(RoughageTestSuiteBase, unittest.TestCase):
         random_house = Publisher.objects.create(name="Random House")
         Author.objects.create(first_name="George", last_name="Costanza")
 
-        Book.objects.create(publisher=penguin, title="Book 1", id=1)
+        Book.objects.create(publisher=penguin, title="Book 1", pk=1)
         Book.objects.create(publisher=random_house, title="Book 2")
 
     seeds_module = 'seeds.fk_dependencies'

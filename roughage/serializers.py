@@ -24,4 +24,4 @@ class Serializer(JSONSerializer):
             dirt = self.dirt
             obj_set = dirt.soil.objects.get(dirt_key, set())
             self._current[field.name] = [m2m_value(related)
-                               for related in getattr(obj, field.name).iterator() if related.id in obj_set]
+                               for related in getattr(obj, field.name).iterator() if related.pk in obj_set]

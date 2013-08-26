@@ -9,7 +9,7 @@ class BookSeed(Seed):
 
     def querysets(self):
         return [
-            Book.objects.filter(id__lt=3)
+            Book.objects.filter(pk__lt=3)
         ]
 
 

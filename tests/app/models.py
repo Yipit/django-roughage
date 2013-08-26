@@ -8,6 +8,7 @@ class Publisher(models.Model):
 
 class Author(models.Model):
 
+    state_id = models.AutoField(primary_key=True)
     first_name = models.CharField(max_length=255)
     last_name = models.CharField(max_length=255)
 
@@ -19,6 +20,7 @@ class Pseudonym(models.Model):
 
 class Book(models.Model):
 
+    isbn = models.AutoField(primary_key=True)
     title = models.CharField(max_length=255)
     authors = models.ManyToManyField(Author)
     publisher = models.ForeignKey(Publisher)
