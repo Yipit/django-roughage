@@ -1,9 +1,28 @@
-from django.core.serializers.json import Serializer as JSONSerializer
+import json
+from django.core.serializers.json import PythonSerializer, DjangoJSONEncoder
 from django.utils.encoding import smart_unicode
 
 from roughage.utils import model_namespace
 
 DIRT = 'dirt'
+
+
+# copy from Django commit d7dfab59ead97b35c6f6786784225f377783e376
+class JSONSerializer(PythonSerializer):
+    """
+    Convert a queryset to JSON.
+    """
+    internal_use_only = False
+
+    def end_serialization(self):
+        if json.__version__.split('.') >= ['2', '1', '3']:
+            # Use JS strings to represent Python Decimal instances (ticket #16850)
+            self.options.update({'use_decimal': False})
+        json.dump(self.objects, self.stream, cls=DjangoJSONEncoder, **self.options)
+
+    def getvalue(self):
+        if callable(getattr(self.stream, 'getvalue', None)):
+            return self.stream.getvalue()
 
 
 class Serializer(JSONSerializer):
