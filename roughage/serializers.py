@@ -1,3 +1,4 @@
+import django
 from django.core.serializers.json import Serializer as JSONSerializer
 from django.utils.encoding import smart_unicode
 
@@ -25,3 +26,52 @@ class Serializer(JSONSerializer):
             obj_set = dirt.soil.objects.get(dirt_key, set())
             self._current[field.name] = [m2m_value(related)
                                for related in getattr(obj, field.name).iterator() if related.pk in obj_set]
+
+    """
+    Django 1.5+ Serializer.serialize() return value looks like this:
+
+        [
+        {
+          "pk": 1,
+          "model": "app.author",
+          "fields": {
+            "first_name": "Bob",
+            "last_name": "Johnson"
+          }
+        }
+        ]
+
+    But this is not compatible with Django 1.4 code, since the structure is different.
+    Since django-roughage was written for Django 1.4, but needs to support Django 1.5,
+    the return value needs to be slightly modificated to look like this:
+
+        {
+            "pk": 1,
+            "model": "app.author",
+            "fields": {
+                "first_name": "Bob",
+                "last_name": "Johnson"
+            }
+        }
+
+    And that's why start_serialization() and end_serialization() were overridden
+    """
+
+    def start_serialization(self):
+        super(Serializer, self).start_serialization()
+        if django.get_version() >= "1.5":
+            # remove "[" from start
+            self._remove_last_char_from_stream()
+
+    def end_serialization(self):
+        super(Serializer, self).end_serialization()
+        if django.get_version() >= "1.5":
+            # remove "\n"
+            if self.options.get("indent"):
+                self._remove_last_char_from_stream()
+            # remove "]"
+            self._remove_last_char_from_stream()
+
+    def _remove_last_char_from_stream(self):
+        self.stream.seek(self.stream.pos - 1)
+        self.stream.buf = self.stream.buf[:-1]

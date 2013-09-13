@@ -10,3 +10,6 @@ INSTALLED_APPS = (
     'roughage',
     'app',
 )
+
+
+SECRET_KEY = "secret"
