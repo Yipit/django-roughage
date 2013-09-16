@@ -1,3 +1,6 @@
+[![Build Status](https://secure.travis-ci.org/Yipit/django-roughage.png)](http://travis-ci.org/Yipit/django-roughage)
+
+
 ### Install
 First install roughage:  `pip install django-roughage`
 
