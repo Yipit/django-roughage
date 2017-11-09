@@ -1,3 +1,1 @@
-nose
-django==1.4
-sure==1.0.6
+django==1.11
