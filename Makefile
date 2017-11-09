@@ -1,5 +1,5 @@
 setup:
-	pip install -r requirements.txt --use-mirrors
+	pip install -r development.txt --use-mirrors
 
 test:
 	nosetests tests
