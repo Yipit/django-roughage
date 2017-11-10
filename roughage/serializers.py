@@ -1,8 +1,7 @@
-import django
 from django.core.serializers.json import Serializer as JSONSerializer
 from django.utils.encoding import smart_unicode
 
-from roughage.utils import model_namespace
+from roughage.utils import model_namespace, is_django_version_greater_than
 
 DIRT = 'dirt'
 
@@ -17,7 +16,7 @@ class Serializer(JSONSerializer):
 
     def handle_m2m_field(self, obj, field):
         if field.rel.through._meta.auto_created:
-            if self.use_natural_keys and hasattr(field.rel.to, 'natural_key'):
+            if hasattr(self, 'use_natural_keys') and self.use_natural_keys and hasattr(field.rel.to, 'natural_key'):
                 m2m_value = lambda value: value.natural_key()
             else:
                 m2m_value = lambda value: smart_unicode(value._get_pk_val(), strings_only=True)
@@ -59,13 +58,13 @@ class Serializer(JSONSerializer):
 
     def start_serialization(self):
         super(Serializer, self).start_serialization()
-        if django.get_version() >= "1.5":
+        if is_django_version_greater_than("1.5"):
             # remove "[" from start
             self._remove_last_char_from_stream()
 
     def end_serialization(self):
         super(Serializer, self).end_serialization()
-        if django.get_version() >= "1.5":
+        if is_django_version_greater_than("1.5"):
             # remove "\n"
             if self.options.get("indent"):
                 self._remove_last_char_from_stream()

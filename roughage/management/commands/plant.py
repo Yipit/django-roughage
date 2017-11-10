@@ -1,11 +1,11 @@
 import inspect
 import sys
+from importlib import import_module
 
 from optparse import make_option
 
 from django.core.management.base import BaseCommand
 from django.conf import settings
-from django.utils.importlib import import_module
 CONFIG_NAME = 'seeds'
 
 from roughage.base import Seed, Dirt
@@ -13,11 +13,29 @@ from roughage.utils import model_namespace
 
 
 class Command(BaseCommand):
-    option_list = BaseCommand.option_list + (
-        make_option("-d", "--database", dest="database", default="default", help='The database name to pull data from'),
-        make_option("-f", "--file", dest="dest_file", default=None, help='The filename to put data in'),
-        make_option("-s", "--seeds", dest="seeds_module", default='seeds', help='The seeds module'),
-    )
+
+    def add_arguments(self, parser):
+        parser.add_argument(
+            "-d",
+            "--database",
+            dest="database",
+            default="default",
+            help='The database name to pull data from'
+        )
+        parser.add_argument(
+            "-f",
+            "--file",
+            dest="dest_file",
+            default=None,
+            help='The filename to put data in'
+        )
+        parser.add_argument(
+            "-s",
+            "--seeds",
+            dest="seeds_module",
+            default='seeds',
+            help='The seeds module'
+        )
 
     def handle(self, *args, **options):
         self.seeds = {}
