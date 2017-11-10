@@ -3,4 +3,4 @@ python:
   - 2.7
 script: make test
 install:
-    - pip install -r requirements.txt
+    - make setup
