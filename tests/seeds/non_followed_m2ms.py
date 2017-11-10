@@ -1,6 +1,6 @@
 from roughage import Seed
 
-from app.models import BookReport
+from tests.app.models import BookReport
 
 
 class BookSeed(Seed):
