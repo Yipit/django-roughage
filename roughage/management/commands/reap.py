@@ -1,11 +1,10 @@
 import json
-
 from collections import defaultdict
-from optparse import make_option
 
+from django.apps import apps
 from django.conf import settings
 from django.contrib.auth.management import create_permissions
-from django.contrib.contenttypes.management import update_contenttypes
+from django.contrib.contenttypes.management import create_contenttypes
 from django.contrib.contenttypes.models import ContentType
 from django.core.management import call_command
 from django.core.management.commands.loaddata import Command as LoadDataCommand
@@ -15,10 +14,16 @@ from django.dispatch.dispatcher import Signal
 
 class Command(LoadDataCommand):
 
-    option_list = LoadDataCommand.option_list + (
-        make_option("-d", "--no-signals", dest="use_signals", default=True,
-            help='Disconnects all signals during import', action="store_false"),
-    )
+    def add_arguments(self, parser):
+        super(Command, self).add_arguments(parser)
+        parser.add_argument(
+            "-d",
+            "--no-signals",
+            dest="use_signals",
+            default=True,
+            help='Disconnects all signals during import',
+            action="store_false"
+        )
 
     def process_migrations(self, data):
 
@@ -52,11 +57,17 @@ class Command(LoadDataCommand):
         for signal in all_signals:
             signal.receivers = []
 
-    def handle(self, *args, **options):
+    def _update_contenttypes(self, *args, **kwargs):
+        for app_config in apps.get_app_configs():
+            create_contenttypes(app_config)
 
-        signals.post_syncdb.disconnect(update_contenttypes)
-        signals.post_syncdb.disconnect(create_permissions, dispatch_uid="django.contrib.auth.management.create_permissions")
-        call_command('syncdb', interactive=False)
+    def handle(self, *args, **options):
+        signals.post_migrate.disconnect(self._update_contenttypes)
+        signals.post_migrate.disconnect(create_permissions, dispatch_uid="django.contrib.auth.management.create_permissions")
+        migrate_kwargs = {'ignore': True}
+        if 'settings' in options:
+            migrate_kwargs['settings'] = options.get('settings')
+        call_command('migrate', interactive=False, **migrate_kwargs)
 
         if 'south' in settings.INSTALLED_APPS:
             filename = args[0]
@@ -90,9 +101,9 @@ class Command(LoadDataCommand):
 
         super(Command, self).handle(*args, **options)
 
-        signals.post_syncdb.connect(update_contenttypes)
-        signals.post_syncdb.connect(create_permissions, dispatch_uid="django.contrib.auth.management.create_permissions")
-        call_command('syncdb')
+        signals.post_migrate.connect(self._update_contenttypes)
+        signals.post_migrate.connect(create_permissions, dispatch_uid="django.contrib.auth.management.create_permissions")
+        call_command('migrate')
 
         # if 'south' in settings.INSTALLED_APPS:
         #     call_command('migrate')
