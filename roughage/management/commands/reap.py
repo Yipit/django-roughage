@@ -14,14 +14,14 @@ from django.dispatch.dispatcher import Signal
 
 
 class Command(LoadDataCommand):
-    
+
     option_list = LoadDataCommand.option_list + (
         make_option("-d", "--no-signals", dest="use_signals", default=True,
             help='Disconnects all signals during import', action="store_false"),
     )
-    
+
     def process_migrations(self, data):
-        
+
         class SortedList(list):
             """
             Utility class for keeping migration_histories sorted
@@ -29,7 +29,7 @@ class Command(LoadDataCommand):
             def append(self, obj):
                 list.append(self, obj)
                 self.sort()
-        
+
         migration_history = [obj for obj in data if obj['model'] == "south.migrationhistory"]
         migration_lists = defaultdict(SortedList)
         migrations = {}
@@ -44,20 +44,20 @@ class Command(LoadDataCommand):
             to = migration_list[-1]
             migrations[app] = to
         return migrations
-    
+
     def disable_signals(self):
         clazz_names = [clazz_name for clazz_name in dir(signals) if not clazz_name.startswith("__")]
         clazzes = [getattr(signals, clazz_name) for clazz_name in clazz_names]
         all_signals = [clazz for clazz in clazzes if isinstance(clazz, Signal)]
         for signal in all_signals:
             signal.receivers = []
-    
+
     def handle(self, *args, **options):
-        
+
         signals.post_syncdb.disconnect(update_contenttypes)
         signals.post_syncdb.disconnect(create_permissions, dispatch_uid="django.contrib.auth.management.create_permissions")
         call_command('syncdb', interactive=False)
-        
+
         if 'south' in settings.INSTALLED_APPS:
             filename = args[0]
             data = json.load(open(filename, 'r'))
@@ -69,7 +69,7 @@ class Command(LoadDataCommand):
                     pass
             import django.core.serializers.python
             orig_get_model = django.core.serializers.python._get_model
-            
+
             def _get_model(model_indentifier):
                 from south.migration.base import Migrations
                 app, model = model_indentifier.split(".")
@@ -79,9 +79,9 @@ class Command(LoadDataCommand):
                     return orm[model_indentifier]
                 else:
                     return orig_get_model(model_indentifier)
-                    
+
             django.core.serializers.python._get_model = _get_model
-        
+
         if not options.pop('use_signals'):
             self.disable_signals()
 
@@ -89,10 +89,10 @@ class Command(LoadDataCommand):
         ContentType.objects.all().delete()
 
         super(Command, self).handle(*args, **options)
-        
+
         signals.post_syncdb.connect(update_contenttypes)
         signals.post_syncdb.connect(create_permissions, dispatch_uid="django.contrib.auth.management.create_permissions")
         call_command('syncdb')
-        
+
         # if 'south' in settings.INSTALLED_APPS:
         #     call_command('migrate')
