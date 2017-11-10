@@ -2,4 +2,4 @@ setup:
 	pip install -r development.txt
 
 test:
-	nosetests tests
+	DJANGO_SETTINGS_MODULE=tests.settings django-admin test --verbosity 2
