@@ -1,6 +1,6 @@
 from roughage import Seed
 
-from app.models import Author
+from tests.app.models import Author
 
 
 class AuthorSeed(Seed):

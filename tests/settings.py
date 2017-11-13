@@ -8,8 +8,7 @@ DATABASES = {
 
 INSTALLED_APPS = (
     'roughage',
-    'app',
+    'tests.app',
 )
-
 
 SECRET_KEY = "secret"

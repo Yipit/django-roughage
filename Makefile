@@ -1,5 +1,6 @@
-init:
-	pip install -r requirements.txt --use-mirrors
+setup:
+	pip install -r development.txt
+	pip install -e .
 
 test:
-	nosetests tests
+	DJANGO_SETTINGS_MODULE=tests.settings django-admin test --verbosity 2

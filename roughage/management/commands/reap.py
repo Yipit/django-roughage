@@ -1,11 +1,10 @@
 import json
-
 from collections import defaultdict
-from optparse import make_option
 
+from django.apps import apps
 from django.conf import settings
 from django.contrib.auth.management import create_permissions
-from django.contrib.contenttypes.management import update_contenttypes
+from django.contrib.contenttypes.management import create_contenttypes
 from django.contrib.contenttypes.models import ContentType
 from django.core.management import call_command
 from django.core.management.commands.loaddata import Command as LoadDataCommand
@@ -14,14 +13,20 @@ from django.dispatch.dispatcher import Signal
 
 
 class Command(LoadDataCommand):
-    
-    option_list = LoadDataCommand.option_list + (
-        make_option("-d", "--no-signals", dest="use_signals", default=True,
-            help='Disconnects all signals during import', action="store_false"),
-    )
-    
+
+    def add_arguments(self, parser):
+        super(Command, self).add_arguments(parser)
+        parser.add_argument(
+            "-d",
+            "--no-signals",
+            dest="use_signals",
+            default=True,
+            help='Disconnects all signals during import',
+            action="store_false"
+        )
+
     def process_migrations(self, data):
-        
+
         class SortedList(list):
             """
             Utility class for keeping migration_histories sorted
@@ -29,7 +34,7 @@ class Command(LoadDataCommand):
             def append(self, obj):
                 list.append(self, obj)
                 self.sort()
-        
+
         migration_history = [obj for obj in data if obj['model'] == "south.migrationhistory"]
         migration_lists = defaultdict(SortedList)
         migrations = {}
@@ -44,20 +49,26 @@ class Command(LoadDataCommand):
             to = migration_list[-1]
             migrations[app] = to
         return migrations
-    
+
     def disable_signals(self):
         clazz_names = [clazz_name for clazz_name in dir(signals) if not clazz_name.startswith("__")]
         clazzes = [getattr(signals, clazz_name) for clazz_name in clazz_names]
         all_signals = [clazz for clazz in clazzes if isinstance(clazz, Signal)]
         for signal in all_signals:
             signal.receivers = []
-    
+
+    def _update_contenttypes(self, *args, **kwargs):
+        for app_config in apps.get_app_configs():
+            create_contenttypes(app_config)
+
     def handle(self, *args, **options):
-        
-        signals.post_syncdb.disconnect(update_contenttypes)
-        signals.post_syncdb.disconnect(create_permissions, dispatch_uid="django.contrib.auth.management.create_permissions")
-        call_command('syncdb', interactive=False)
-        
+        signals.post_migrate.disconnect(self._update_contenttypes)
+        signals.post_migrate.disconnect(create_permissions, dispatch_uid="django.contrib.auth.management.create_permissions")
+        migrate_kwargs = {'ignore': True}
+        if 'settings' in options:
+            migrate_kwargs['settings'] = options.get('settings')
+        call_command('migrate', interactive=False, **migrate_kwargs)
+
         if 'south' in settings.INSTALLED_APPS:
             filename = args[0]
             data = json.load(open(filename, 'r'))
@@ -69,7 +80,7 @@ class Command(LoadDataCommand):
                     pass
             import django.core.serializers.python
             orig_get_model = django.core.serializers.python._get_model
-            
+
             def _get_model(model_indentifier):
                 from south.migration.base import Migrations
                 app, model = model_indentifier.split(".")
@@ -79,9 +90,9 @@ class Command(LoadDataCommand):
                     return orm[model_indentifier]
                 else:
                     return orig_get_model(model_indentifier)
-                    
+
             django.core.serializers.python._get_model = _get_model
-        
+
         if not options.pop('use_signals'):
             self.disable_signals()
 
@@ -89,10 +100,10 @@ class Command(LoadDataCommand):
         ContentType.objects.all().delete()
 
         super(Command, self).handle(*args, **options)
-        
-        signals.post_syncdb.connect(update_contenttypes)
-        signals.post_syncdb.connect(create_permissions, dispatch_uid="django.contrib.auth.management.create_permissions")
-        call_command('syncdb')
-        
+
+        signals.post_migrate.connect(self._update_contenttypes)
+        signals.post_migrate.connect(create_permissions, dispatch_uid="django.contrib.auth.management.create_permissions")
+        call_command('migrate')
+
         # if 'south' in settings.INSTALLED_APPS:
         #     call_command('migrate')

@@ -1,6 +1,6 @@
 from roughage import Seed
 
-from app.models import Pseudonym
+from tests.app.models import Pseudonym
 
 
 class BookSeed(Seed):

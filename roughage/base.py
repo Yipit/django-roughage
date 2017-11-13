@@ -4,10 +4,10 @@ from collections import defaultdict
 from django.db import models
 from django.core import serializers
 from django.core.exceptions import ObjectDoesNotExist
-from django.db.models.loading import get_model
+from django.apps import apps
 from django.db.models import Manager
 
-from .utils import chunks, model_namespace, get_model_from_key
+from .utils import chunks, model_namespace, get_model_from_key, get_all_related_objects
 
 
 class SeedMeta(type):
@@ -16,7 +16,7 @@ class SeedMeta(type):
         model = attrs.get('model')
         if isinstance(model, basestring):
             app, model = attrs.get('model').split(".")
-            attrs['model'] = get_model(app, model)
+            attrs['model'] = apps.get_model(app, model)
         return super(SeedMeta, cls).__new__(cls, name, bases, attrs)
 
 
@@ -124,10 +124,10 @@ class Seed(object):
         """
 
         model = obj.__class__
-        related_objects = model._meta.get_all_related_objects()
+        related_objects = get_all_related_objects(model)
         seeds = {}
         for related_object in related_objects:
-            related_model = related_object.model
+            related_model = related_object.related_model
             key = model_namespace(related_model)
             seed = self.seeds.get(key)
             if seed:
@@ -183,7 +183,7 @@ class Seed(object):
 
     def add_one2ones(self, obj):
         one2ones = [related.get_accessor_name()
-                    for related in obj._meta.get_all_related_objects()
+                    for related in get_all_related_objects(obj)
                     if isinstance(related.field, models.OneToOneField)
                 ]
         for one2one in one2ones:
