@@ -4,4 +4,4 @@ register_serializer('roughage', 'roughage.serializers')
 
 from roughage.base import Seed
 
-__all__ = [Seed]
+__all__ = ['Seed']
